@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       
       const { createNotifications } = await import("@/lib/notifications");
       
-      const notifications = admins.map((admin) => ({
+      const notifications: any[] = admins.map((admin) => ({
         userId: admin.id,
         title: "New Discipline Report",
         message: `A new discipline report has been submitted for category: ${category}.`,
