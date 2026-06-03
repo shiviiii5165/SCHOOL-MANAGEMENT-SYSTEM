@@ -28,7 +28,7 @@ export async function GET(
       const presentCount = records.filter((r) => r.status === "PRESENT").length;
       const absentCount = records.filter((r) => r.status === "ABSENT").length;
       const lateCount = records.filter((r) => r.status === "LATE").length;
-      const attendancePercentage = totalClasses > 0 ? (presentCount / totalClasses) * 100 : 100;
+      const attendancePercentage = totalClasses > 0 ? ((presentCount + lateCount) / totalClasses) * 100 : 100;
 
       summary = await prisma.attendanceSummary.create({
         data: {

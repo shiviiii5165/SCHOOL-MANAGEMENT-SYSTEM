@@ -159,12 +159,12 @@ export async function POST(req: NextRequest) {
     }
 
     const updates = allStudents.flatMap(student => {
-      const totalClassesHeld = classLogs.filter(log => log.date >= student.admissionDate).length;
       const studentStats = attendanceMap.get(student.id) || { PRESENT: 0, ABSENT: 0, LATE: 0, BLOCKED: 0 };
       const presentCount = studentStats.PRESENT;
       const lateCount = studentStats.LATE;
+      const absentCount = studentStats.ABSENT;
       
-      const absentCount = totalClassesHeld - presentCount - lateCount;
+      const totalClassesHeld = presentCount + lateCount + absentCount + studentStats.BLOCKED;
       
       let attendancePercentage = totalClassesHeld > 0 
         ? ((presentCount + lateCount) / totalClassesHeld) * 100 
