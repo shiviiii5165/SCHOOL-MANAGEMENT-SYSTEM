@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/cron/lift-suspensions", "schedule": "0 0 * * *" }
+  ],
+  "buildCommand": "prisma generate && next build"
+}
