@@ -16,14 +16,24 @@ export async function GET(
 
     const { studentId } = params;
 
+    let actualStudentId = studentId;
+    const studentCheck = await prisma.student.findUnique({
+      where: { userId: studentId },
+      select: { id: true }
+    });
+    
+    if (studentCheck) {
+      actualStudentId = studentCheck.id;
+    }
+
     // Get or compute summary
     let summary = await prisma.attendanceSummary.findUnique({
-      where: { studentId },
+      where: { studentId: actualStudentId },
     });
 
     if (!summary) {
       // Compute from raw attendance records
-      const records = await prisma.attendance.findMany({ where: { studentId } });
+      const records = await prisma.attendance.findMany({ where: { studentId: actualStudentId } });
       const totalClasses = records.length;
       const presentCount = records.filter((r) => r.status === "PRESENT").length;
       const absentCount = records.filter((r) => r.status === "ABSENT").length;
@@ -32,7 +42,7 @@ export async function GET(
 
       summary = await prisma.attendanceSummary.create({
         data: {
-          studentId,
+          studentId: actualStudentId,
           totalClasses,
           presentCount,
           absentCount,
@@ -44,7 +54,7 @@ export async function GET(
 
     // Also get student detention info
     const student = await prisma.student.findUnique({
-      where: { id: studentId },
+      where: { id: actualStudentId },
       select: {
         examEligible: true,
         detainedAt: true,

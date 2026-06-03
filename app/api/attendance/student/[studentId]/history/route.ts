@@ -15,6 +15,17 @@ export async function GET(
     }
 
     const { studentId } = params;
+    
+    let actualStudentId = studentId;
+    const studentCheck = await prisma.student.findUnique({
+      where: { userId: studentId },
+      select: { id: true }
+    });
+    
+    if (studentCheck) {
+      actualStudentId = studentCheck.id;
+    }
+
     const url = new URL(req.url);
     const month = url.searchParams.get("month"); // e.g. "2026-05"
 
@@ -33,7 +44,7 @@ export async function GET(
 
     const records = await prisma.attendance.findMany({
       where: {
-        studentId,
+        studentId: actualStudentId,
         ...dateFilter,
       },
       orderBy: { date: "desc" },
