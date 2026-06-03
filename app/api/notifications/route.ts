@@ -20,11 +20,7 @@ export async function GET(req: NextRequest) {
     
     const unreadCount = notifications.filter(n => !n.isRead).length;
     
-    // Add cache headers for polling efficiency
-    const headers = new Headers();
-    headers.set('Cache-Control', 'private, max-age=15, stale-while-revalidate=30');
-    
-    return NextResponse.json({ notifications, unreadCount }, { headers });
+    return NextResponse.json({ notifications, unreadCount });
   } catch (error) {
     console.error("Error fetching notifications:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

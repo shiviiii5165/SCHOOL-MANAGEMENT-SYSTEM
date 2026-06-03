@@ -43,18 +43,47 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Notify admins
+    // Notify stakeholders
     try {
       const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
+      
+      // We need to fetch the student's parent for notification
+      const studentData = await prisma.student.findUnique({
+        where: { id: studentId },
+        include: { user: true, parent: { include: { user: true } } }
+      });
+      
+      const { createNotifications } = await import("@/lib/notifications");
+      
       const notifications = admins.map((admin) => ({
         userId: admin.id,
         title: "New Discipline Report",
         message: `A new discipline report has been submitted for category: ${category}.`,
         type: "DISCIPLINE" as "DISCIPLINE",
       }));
+      
+      if (studentData) {
+        notifications.push({
+          userId: studentData.userId,
+          title: "Discipline Report Filed",
+          message: `A discipline report (${category}) has been filed regarding your conduct.`,
+          type: "DISCIPLINE" as "DISCIPLINE",
+          link: "/student"
+        });
+        
+        if (studentData.parent?.userId) {
+          notifications.push({
+            userId: studentData.parent.userId,
+            title: "Discipline Report Filed",
+            message: `A discipline report (${category}) has been filed regarding ${studentData.user.name}.`,
+            type: "DISCIPLINE" as "DISCIPLINE",
+            link: "/parent"
+          });
+        }
+      }
 
       if (notifications.length > 0) {
-        await prisma.notification.createMany({ data: notifications });
+        await createNotifications(notifications);
       }
     } catch (notifError) {
       console.error("Error sending notifications:", notifError);

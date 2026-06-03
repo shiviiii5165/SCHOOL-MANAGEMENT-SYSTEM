@@ -54,6 +54,7 @@ export async function POST(req: NextRequest, { params }: { params: { reportId: s
       await createNotifications([
         { userId: report.student.userId, title: 'Incident Dismissed', message: `Your incident report (${report.category}) has been reviewed and dismissed.`, type: 'DISCIPLINE', link: '/student' },
         { userId: report.student.parent?.userId, title: 'Incident Dismissed', message: `${report.student.user.name}'s incident report has been dismissed by admin.`, type: 'DISCIPLINE', link: '/parent' },
+        { userId: report.teacher.userId, title: 'Report Reviewed', message: `Your discipline report for ${report.student.user.name} has been dismissed.`, type: 'DISCIPLINE', link: '/teacher' },
       ]);
     }
 
@@ -72,6 +73,7 @@ export async function POST(req: NextRequest, { params }: { params: { reportId: s
       await createNotifications([
         { userId: report.student.userId, title: '⚠️ Official Warning Issued', message: `An official warning has been issued to you. Reason: ${body.warningNote}`, type: 'DISCIPLINE', link: '/student' },
         { userId: report.student.parent?.userId, title: '⚠️ Warning Issued to Your Child', message: `${report.student.user.name} received an official warning. Reason: ${body.warningNote}`, type: 'DISCIPLINE', link: '/parent' },
+        { userId: report.teacher.userId, title: 'Report Reviewed: Warning Issued', message: `Your discipline report for ${report.student.user.name} resulted in a warning.`, type: 'DISCIPLINE', link: '/teacher' },
       ]);
     }
 
@@ -94,6 +96,7 @@ export async function POST(req: NextRequest, { params }: { params: { reportId: s
       await createNotifications([
         { userId: report.student.userId, title: '🚫 Suspension Issued', message: `You have been suspended from ${formatDate(from)} to ${formatDate(until)} (${days} day${days>1?'s':''}). Reason: ${body.reason}. Your attendance is blocked during this period.`, type: 'DISCIPLINE', link: '/student' },
         { userId: report.student.parent?.userId, title: '🚫 Your Child Has Been Suspended', message: `${report.student.user.name} has been suspended from ${formatDate(from)} to ${formatDate(until)}. Reason: ${body.reason}. Please contact the school for further information.`, type: 'DISCIPLINE', link: '/parent' },
+        { userId: report.teacher.userId, title: 'Report Reviewed: Suspension Issued', message: `Your discipline report for ${report.student.user.name} resulted in a suspension.`, type: 'DISCIPLINE', link: '/teacher' },
       ]);
     }
 
