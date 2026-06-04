@@ -15,13 +15,14 @@ export interface UploadResponse {
 
 export const uploadToCloudinary = (
   fileBuffer: Buffer,
-  folder: string = 'educore'
+  folder: string = 'educore',
+  resourceType: 'auto' | 'image' | 'video' | 'raw' = 'auto'
 ): Promise<UploadResponse> => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder,
-        resource_type: 'auto', // Auto detects if it's image, video, or raw file (PDFs etc)
+        resource_type: resourceType,
       },
       (error, result) => {
         if (error || !result) {

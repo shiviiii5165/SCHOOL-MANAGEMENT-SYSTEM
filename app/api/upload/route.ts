@@ -26,8 +26,21 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    // Determine resource type: Upload PDFs and documents as 'raw' so they render correctly in browsers
+    let resourceType: 'auto' | 'raw' = 'auto';
+    if (
+      file.type === 'application/pdf' || 
+      file.name.toLowerCase().endsWith('.pdf') || 
+      file.name.toLowerCase().endsWith('.docx') ||
+      file.name.toLowerCase().endsWith('.doc') ||
+      file.name.toLowerCase().endsWith('.zip') ||
+      file.name.toLowerCase().endsWith('.txt')
+    ) {
+      resourceType = 'raw';
+    }
+
     // Upload to Cloudinary
-    const result = await uploadToCloudinary(buffer, "educore/assignments");
+    const result = await uploadToCloudinary(buffer, "educore/assignments", resourceType);
 
     return NextResponse.json({ 
       success: true, 
