@@ -67,35 +67,41 @@ export async function PATCH(
         gradedAt: new Date(),
       },
       include: {
-        student: { include: { parent: true } },
         assignment: true
       }
     });
 
-    // Notify student and parent
-    const notifications = [];
-    notifications.push({
-      userId: updated.student.userId,
-      title: "Assignment Graded",
-      message: `Your assignment "${updated.assignment.title}" has been graded.`,
-      type: "ACADEMIC" as any,
-      link: "/student/assignments",
+    const student = await prisma.student.findUnique({
+      where: { id: updated.studentId },
+      include: { parent: true }
     });
 
-    if (updated.student.parent) {
+    // Notify student and parent
+    if (student) {
+      const notifications = [];
       notifications.push({
-        userId: updated.student.parent.userId,
+        userId: student.userId,
         title: "Assignment Graded",
-        message: `Your child's assignment "${updated.assignment.title}" has been graded.`,
+        message: `Your assignment "${updated.assignment.title}" has been graded.`,
         type: "ACADEMIC" as any,
-        link: "/parent/assignments",
+        link: "/student/assignments",
       });
-    }
 
-    if (notifications.length > 0) {
-      await prisma.notification.createMany({
-        data: notifications
-      });
+      if (student.parent) {
+        notifications.push({
+          userId: student.parent.userId,
+          title: "Assignment Graded",
+          message: `Your child's assignment "${updated.assignment.title}" has been graded.`,
+          type: "ACADEMIC" as any,
+          link: "/parent/assignments",
+        });
+      }
+
+      if (notifications.length > 0) {
+        await prisma.notification.createMany({
+          data: notifications
+        });
+      }
     }
 
     return NextResponse.json({ success: true, submission: updated });
