@@ -48,6 +48,7 @@ export const getNavItems = (role: string) => {
         { label: "Child Attendance", href: "/parent/attendance", icon: FileCheck2 },
         { label: "Child Exams", href: "/parent/exams", icon: Trophy },
         { label: "Child Results", href: "/parent/results", icon: FileText },
+        { label: "Child Assignments", href: "/parent/assignments", icon: BookOpen },
         { label: "Fees", href: "/parent/fees", icon: CreditCard },
         { label: "Messages", href: "/parent/messages", icon: MessageSquare },
       ];

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-// GET — fetch unread notifications for current user
+// GET — fetch unread notifications for current user + global unread count
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
@@ -18,7 +18,10 @@ export async function GET(req: NextRequest) {
       take:    20,
     });
     
-    const unreadCount = notifications.filter(n => !n.isRead).length;
+    // Explicit global unread count directly from DB
+    const unreadCount = await prisma.notification.count({
+      where: { userId: session.user.id, isRead: false }
+    });
     
     return NextResponse.json({ notifications, unreadCount });
   } catch (error) {
@@ -27,7 +30,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// PATCH — mark all as read
+// PATCH — mark read (all or specific ids)
 export async function PATCH(req: NextRequest) {
   try {
     const session = await auth();
@@ -35,10 +38,29 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await prisma.notification.updateMany({
-      where: { userId: session.user.id, isRead: false },
-      data:  { isRead: true },
-    });
+    const body = await req.json().catch(() => ({}));
+    const ids = body.ids;
+    const link = body.link;
+
+    if (Array.isArray(ids) && ids.length > 0) {
+      // Mark specific IDs as read
+      await prisma.notification.updateMany({
+        where: { userId: session.user.id, id: { in: ids }, isRead: false },
+        data:  { isRead: true },
+      });
+    } else if (link) {
+      // Mark all notifications with specific link as read
+      await prisma.notification.updateMany({
+        where: { userId: session.user.id, link: link, isRead: false },
+        data:  { isRead: true },
+      });
+    } else {
+      // Fallback: Mark all as read
+      await prisma.notification.updateMany({
+        where: { userId: session.user.id, isRead: false },
+        data:  { isRead: true },
+      });
+    }
     
     return NextResponse.json({ success: true });
   } catch (error) {

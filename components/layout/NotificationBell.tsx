@@ -53,6 +53,7 @@ const timeAgo = (dateStr: string) => {
 export default function NotificationBell({ role }: { role: string }) {
   const { notifications, unreadCount, mutate } = useNotifications();
   const [open, setOpen] = useState(false);
+  const [hideBadge, setHideBadge] = useState(false);
   const router = useRouter();
 
   const TYPE_ICONS: Record<string, { icon: any, color: string }> = {
@@ -64,12 +65,36 @@ export default function NotificationBell({ role }: { role: string }) {
   };
 
   const markAllRead = async () => {
+    // Hide the badge locally instantly
+    setHideBadge(true);
+    // Send background request
     await fetch('/api/notifications', { method: 'PATCH' });
-    mutate();
+    // Do NOT mutate immediately if the panel is open, 
+    // so the items still look unread while the user views them.
+    if (!open) {
+      mutate();
+    }
+  };
+
+  const handleOpenToggle = () => {
+    const newOpenState = !open;
+    setOpen(newOpenState);
+    if (newOpenState) {
+      // Opening the panel: mark visible ones as read in DB, hide badge
+      markAllRead();
+    } else {
+      // Closing the panel: sync state to remove bold styling from items
+      mutate();
+      setHideBadge(false); // Reset local override so next poll can show badge if new notifs arrive
+    }
   };
 
   const markRead = async (id: string) => {
-    await fetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
+    await fetch(`/api/notifications`, { 
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [id] })
+    });
     mutate();
   };
 
@@ -79,11 +104,11 @@ export default function NotificationBell({ role }: { role: string }) {
     <div className="relative">
       <button 
         aria-label="Notifications"
-        onClick={() => { setOpen(!open); if (!open) markAllRead() }}
+        onClick={handleOpenToggle}
         className="relative p-2.5 text-text-secondary hover:bg-surface-hover rounded-xl transition-all hover:text-text-primary"
       >
         <Bell className="w-[18px] h-[18px]" />
-        {unreadCount > 0 && (
+        {unreadCount > 0 && !hideBadge && (
           <span className="absolute top-1 right-1 min-w-[16px] h-4 rounded-full bg-status-danger text-white text-[10px] font-bold flex items-center justify-center px-0.5 border-2 border-surface">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
@@ -96,15 +121,15 @@ export default function NotificationBell({ role }: { role: string }) {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
             <div>
               <span className="text-sm font-semibold text-text-primary">Notifications</span>
-              {unreadCount > 0 && (
+              {unreadCount > 0 && !hideBadge && (
                 <span className="ml-2 bg-status-danger text-white rounded px-1.5 py-0.5 text-[10px] font-bold">{unreadCount} new</span>
               )}
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={markAllRead} className="text-xs text-primary hover:underline">
+              <button onClick={() => { mutate(); setHideBadge(false); }} className="text-xs text-primary hover:underline">
                 Mark all read
               </button>
-              <button onClick={() => setOpen(false)} className="sm:hidden text-text-muted">
+              <button onClick={handleOpenToggle} className="sm:hidden text-text-muted">
                 ✕
               </button>
             </div>
@@ -123,7 +148,7 @@ export default function NotificationBell({ role }: { role: string }) {
               
               return (
                 <div key={n.id}
-                  onClick={() => { markRead(n.id); setOpen(false); if(n.link) router.push(n.link); }}
+                  onClick={() => { markRead(n.id); handleOpenToggle(); if(n.link) router.push(n.link); }}
                   className={cn(
                     "flex gap-3 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors",
                     !n.isRead && "bg-primary-light/10"
@@ -149,7 +174,7 @@ export default function NotificationBell({ role }: { role: string }) {
 
           {/* Footer */}
           <div className="px-4 py-2.5 border-t border-border text-center bg-background shrink-0 pb-[env(safe-area-inset-bottom)]">
-            <Link onClick={() => setOpen(false)} href={`/${rolePrefix}/notifications`} className="text-xs text-primary font-medium hover:underline inline-block w-full py-2">
+            <Link onClick={handleOpenToggle} href={`/${rolePrefix}/notifications`} className="text-xs text-primary font-medium hover:underline inline-block w-full py-2">
               View all notifications →
             </Link>
           </div>

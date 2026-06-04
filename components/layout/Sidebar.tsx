@@ -8,6 +8,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GraduationCap, LogOut, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { getNavItems } from "@/lib/navItems";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function Sidebar({ 
   user, 
@@ -29,6 +32,34 @@ export default function Sidebar({
     PARENT: "bg-role-parent",
   };
 
+  // Poll nav badges
+  const { data: badgeData, mutate: mutateBadges } = useSWR('/api/nav-badges', fetcher, {
+    refreshInterval: 15000,
+  });
+  
+  const badges = badgeData?.badges || {};
+
+  // Auto-clear notifications when visiting a page
+  useEffect(() => {
+    // If we have unread notifications for this exact pathname, mark them read
+    const checkAndClear = async () => {
+      // Small optimization: only send if we think there's a badge, OR just aggressively send
+      // to ensure the DB is cleared. We'll send if there's a badge to save network.
+      if (badges[pathname] > 0) {
+        // Optimistic UI clear
+        mutateBadges({ badges: { ...badges, [pathname]: 0 } }, false);
+        await fetch('/api/notifications', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ link: pathname })
+        });
+        // Re-validate
+        mutateBadges();
+      }
+    };
+    checkAndClear();
+  }, [pathname, badges, mutateBadges]);
+
   // Close mobile drawer on route change
   useEffect(() => {
     if (isOpenMobile && onCloseMobile) {
@@ -36,10 +67,7 @@ export default function Sidebar({
     }
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // For non-admins, the sidebar is only used as a "More" drawer on mobile, 
-  // or normally on desktop. Actually, let's keep desktop behavior 100% same.
   const hasBottomNav = user.role !== "ADMIN";
-  const desktopClasses = hasBottomNav ? "hidden md:flex" : "hidden md:flex";
 
   const sidebarContent = (
     <>
@@ -85,27 +113,40 @@ export default function Sidebar({
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          const badgeCount = badges[item.href] || 0;
+          
           return (
             <Link key={item.href} href={item.href} prefetch={true}>
               <div
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group relative overflow-hidden whitespace-nowrap ${
+                className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-all group relative overflow-hidden whitespace-nowrap ${
                   isActive
                     ? "bg-primary-light text-primary font-medium"
                     : "text-text-secondary hover:bg-background hover:text-text-primary"
                 }`}
                 title={collapsed ? item.label : undefined}
               >
-                {isActive && (
-                  <motion.div
-                    className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r"
-                  />
+                <div className="flex items-center gap-3 flex-1 overflow-hidden">
+                  {isActive && (
+                    <motion.div
+                      className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r"
+                    />
+                  )}
+                  <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-primary" : "text-text-muted group-hover:text-text-secondary"}`} />
+                  {!collapsed && (
+                    <span className="truncate">{item.label}</span>
+                  )}
+                </div>
+                
+                {/* Dynamic Numerical Badge */}
+                {!collapsed && badgeCount > 0 && (
+                  <div className="flex items-center justify-center bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 min-w-[20px] h-5 rounded-full flex-shrink-0">
+                    {badgeCount > 99 ? '99+' : badgeCount}
+                  </div>
                 )}
-                <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-primary" : "text-text-muted group-hover:text-text-secondary"}`} />
-                {!collapsed && (
-                  <span className="flex-1">{item.label}</span>
-                )}
-                {item.alert && !collapsed && (
-                  <div className="w-2 h-2 rounded-full bg-status-warning mr-1" />
+                
+                {/* Hardcoded Alert Dots (Fallback) */}
+                {item.alert && !collapsed && badgeCount === 0 && (
+                  <div className="w-2 h-2 rounded-full bg-status-warning flex-shrink-0 mr-1" />
                 )}
               </div>
             </Link>
