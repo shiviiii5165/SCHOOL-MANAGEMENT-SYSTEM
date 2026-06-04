@@ -16,24 +16,29 @@ export async function GET(
 
     const submissions = await prisma.submission.findMany({
       where: { assignmentId },
-      include: {
-        student: {
-          include: {
-            user: { select: { name: true, email: true } },
-          },
-        },
-      },
       orderBy: { submittedAt: 'desc' },
     });
 
-    const formattedSubmissions = submissions.map((s) => ({
-      id: s.id,
-      studentName: s.student.user.name,
-      fileUrl: s.fileUrl,
-      feedback: s.feedback,
-      marks: s.marks,
-      submittedAt: s.submittedAt,
-    }));
+    const studentIds = submissions.map(s => s.studentId);
+    const students = await prisma.student.findMany({
+      where: { id: { in: studentIds } },
+      include: { user: { select: { name: true, email: true } } }
+    });
+
+    const studentMap = new Map();
+    students.forEach(s => studentMap.set(s.id, s));
+
+    const formattedSubmissions = submissions.map((s) => {
+      const student = studentMap.get(s.studentId);
+      return {
+        id: s.id,
+        studentName: student?.user?.name || "Unknown Student",
+        fileUrl: s.fileUrl,
+        feedback: s.feedback,
+        marks: s.marks,
+        submittedAt: s.submittedAt,
+      };
+    });
 
     return NextResponse.json({ success: true, submissions: formattedSubmissions });
   } catch (error) {
