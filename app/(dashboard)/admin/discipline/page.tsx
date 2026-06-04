@@ -65,13 +65,20 @@ export default function AdminDisciplinePage() {
     },
   });
 
-  // Suspend mutation
   const suspendMutation = useMutation({
     mutationFn: async ({ id, note, durationDays }: { id: string; note: string; durationDays: number }) => {
+      const from = new Date();
+      const until = new Date();
+      until.setDate(until.getDate() + durationDays);
       const res = await fetch(`/api/discipline/reports/${id}/suspend`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminNote: note, durationDays }),
+        body: JSON.stringify({ 
+          action: "SUSPENSION", 
+          suspendedFrom: from.toISOString(), 
+          suspendedUntil: until.toISOString(), 
+          reason: note 
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
