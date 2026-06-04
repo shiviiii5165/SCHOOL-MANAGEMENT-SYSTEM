@@ -107,8 +107,23 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
         throw new Error(createData.error || "Failed to create assignment");
       }
 
-      // Append locally for now to show immediate update
-      setAssignments([createData.assignment, ...assignments]);
+      // Append locally formatted assignment to show immediate update
+      const newAssignment = {
+        id: createData.assignment.id,
+        title: createData.assignment.title,
+        subject: subjects.find(s => s.id === subjectId)?.name || "Subject",
+        className: classes.find(c => c.id === classId) ? `${classes.find(c => c.id === classId)?.name} - ${classes.find(c => c.id === classId)?.section}` : "Class",
+        dueDate: createData.assignment.dueDate,
+        maxMarks: createData.assignment.maxMarks,
+        totalStudents: 0,
+        submitted: 0,
+        graded: 0,
+        status: "ACTIVE" as const,
+        createdAt: createData.assignment.createdAt,
+        fileUrl: createData.assignment.fileUrl
+      };
+      
+      setAssignments([newAssignment, ...assignments]);
       setShowModal(false);
       
       // Reset form
