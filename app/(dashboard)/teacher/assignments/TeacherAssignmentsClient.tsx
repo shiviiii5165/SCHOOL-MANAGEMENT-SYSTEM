@@ -20,6 +20,7 @@ export interface Assignment {
   graded: number;
   status: "ACTIVE" | "CLOSED" | "DRAFT";
   createdAt: string;
+  fileUrl?: string | null;
 }
 
 const statusConfig: Record<string, { label: string, bg: string, text: string, dot: string }> = {
