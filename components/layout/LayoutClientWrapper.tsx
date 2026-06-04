@@ -33,7 +33,7 @@ export default function LayoutClientWrapper({
         onCloseMobile={() => setIsMobileDrawerOpen(false)} 
       />
 
-      <div className={`flex-1 flex flex-col transition-all duration-300 w-full ml-0 md:ml-[72px] lg:ml-[240px] ${hasBottomNav ? 'pb-16 md:pb-0' : ''} ${isMessagesPage ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh]'}`}>
+      <div className={`flex-1 flex flex-col transition-all duration-300 w-full ml-0 md:ml-[240px] ${hasBottomNav ? 'pb-16 md:pb-0' : ''} ${isMessagesPage ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh]'}`}>
         <Topbar 
           user={user} 
           onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)} 

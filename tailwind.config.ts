@@ -14,7 +14,10 @@ const config: Config = {
           light: "#EFF6FF",
           dark: "#1D4ED8",
         },
-        surface: "#FFFFFF",
+        surface: {
+          DEFAULT: "#FFFFFF",
+          hover: "#F1F5F9",
+        },
         background: "#F8FAFC",
         border: {
           DEFAULT: "#E2E8F0",

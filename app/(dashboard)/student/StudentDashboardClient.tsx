@@ -77,7 +77,7 @@ export default function StudentDashboardClient({ student }: { student: any }) {
         <div className="lg:col-span-2 bg-surface p-6 rounded-xl shadow-card border border-border">
           <div className="flex items-center justify-between mb-6">
             <h3 className="font-display font-semibold text-lg text-text-primary">Today&apos;s Classes</h3>
-            <Link href="#" className="text-sm text-primary font-medium hover:underline">Full Timetable</Link>
+            <Link href="/student/exams" className="text-sm text-primary font-medium hover:underline">Full Timetable</Link>
           </div>
           <div className="space-y-4">
             {[

@@ -153,7 +153,7 @@ export default function ParentDashboardClient({ childrenData, parentName, newNot
           <div className="bg-surface p-6 rounded-xl shadow-card border border-border">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-display font-semibold text-lg text-text-primary">This Week&apos;s Attendance</h3>
-              <Link href="#" className="text-sm text-primary font-medium hover:underline">View All</Link>
+              <Link href="/parent/attendance" className="text-sm text-primary font-medium hover:underline">View All</Link>
             </div>
             <div className="flex gap-2">
               {["Mon", "Tue", "Wed", "Thu", "Fri"].map((day, i) => (
@@ -189,7 +189,7 @@ export default function ParentDashboardClient({ childrenData, parentName, newNot
                 </div>
                 <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-primary transition-colors" />
               </Link>
-              <Link href="#" className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-primary-light transition-colors group">
+              <Link href="/parent/messages" className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-primary-light transition-colors group">
                 <div className="flex items-center gap-3">
                   <Users className="w-5 h-5 text-text-muted group-hover:text-primary transition-colors" />
                   <span className="text-sm font-medium text-text-primary">Contact Teachers</span>

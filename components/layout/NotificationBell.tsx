@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import useSWR from "swr";
 import { io } from "socket.io-client";
 import { Bell, AlertTriangle, Calendar, CreditCard, BookOpen, Settings } from "lucide-react";
@@ -55,6 +55,25 @@ export default function NotificationBell({ role }: { role: string }) {
   const [open, setOpen] = useState(false);
   const [hideBadge, setHideBadge] = useState(false);
   const router = useRouter();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Click-outside-to-close
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        mutate();
+        setHideBadge(false);
+      }
+    };
+    // Delay attaching so the opening click doesn't immediately close
+    const timer = setTimeout(() => document.addEventListener('mousedown', handleClickOutside), 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [open, mutate]);
 
   const TYPE_ICONS: Record<string, { icon: any, color: string }> = {
     DISCIPLINE: { icon: AlertTriangle, color: 'text-danger'  },
@@ -101,7 +120,7 @@ export default function NotificationBell({ role }: { role: string }) {
   const rolePrefix = role.toLowerCase();
 
   return (
-    <div className="relative">
+    <div className="relative" ref={panelRef}>
       <button 
         aria-label="Notifications"
         onClick={handleOpenToggle}

@@ -5,7 +5,6 @@ import {
   FileText, Calendar, Clock, BookOpen, User,
   CheckCircle2, AlertCircle, TrendingUp, Trophy, GraduationCap, XCircle
 } from "lucide-react";
-import { getGradeColor } from "@/lib/examUtils"; // let's see if we can use this, actually we don't need it if we do numeric grades, but let's stick to simple text colors.
 
 export interface ParentAssignment {
   id: string;

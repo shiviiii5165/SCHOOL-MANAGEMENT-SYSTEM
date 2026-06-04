@@ -6,4 +6,36 @@
   body {
     @apply bg-background text-text-primary antialiased;
   }
+
+  /* Smooth scroll everywhere */
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Better touch targets on mobile */
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep scrolling */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Momentum scrolling for iOS */
+  .scroll-smooth-touch {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Text balance for headings */
+  .text-pretty {
+    text-wrap: pretty;
+  }
 }
