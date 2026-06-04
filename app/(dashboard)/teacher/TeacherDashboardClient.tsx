@@ -7,10 +7,12 @@ import Link from "next/link";
 
 export default function TeacherDashboardClient({ 
   todaySchedule = [], 
-  stats = { students: 0, classesToday: 0 } 
+  stats = { students: 0, classesToday: 0 },
+  markedClassIds = []
 }: { 
   todaySchedule: any[];
   stats: { students: number; classesToday: number };
+  markedClassIds?: string[];
 }) {
   const [currentTime, setCurrentTime] = useState("");
 
@@ -83,6 +85,7 @@ export default function TeacherDashboardClient({
             ) : (
               todaySchedule.map((cls, i) => {
                 const status = getStatus(cls.startTime, cls.endTime);
+                const isMarked = markedClassIds.includes(cls.classId);
                 return (
                   <div key={i} className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${status === "ongoing" ? "border-primary bg-primary-light/10 shadow-sm animate-pulse" : "border-border hover:border-primary/50"}`}>
                     <div className={`w-2 h-12 rounded-full ${status === "completed" ? "bg-status-success" : status === "ongoing" ? "bg-primary" : "bg-border"}`} />
@@ -90,6 +93,7 @@ export default function TeacherDashboardClient({
                       <h4 className="font-medium text-text-primary flex items-center gap-2">
                         {cls.subject.name}
                         {status === "ongoing" && <span className="text-[10px] uppercase font-bold bg-primary text-white px-1.5 py-0.5 rounded">Live Now</span>}
+                        {isMarked && <span className="text-[10px] uppercase font-bold bg-green-100 text-green-700 border border-green-200 px-1.5 py-0.5 rounded flex items-center gap-1">✓ Marked</span>}
                       </h4>
                       <p className="text-sm text-text-secondary mt-0.5">{cls.class.name} {cls.class.section} • {cls.roomNumber}</p>
                     </div>

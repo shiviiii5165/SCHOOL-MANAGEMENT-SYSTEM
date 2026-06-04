@@ -199,7 +199,11 @@ export async function POST(req: NextRequest) {
       ];
     });
 
-    await prisma.$transaction(updates);
+    // Execute updates in parallel chunks of 10 to avoid connection pool exhaustion and transaction timeouts
+    const chunkSize = 10;
+    for (let i = 0; i < updates.length; i += chunkSize) {
+      await Promise.all(updates.slice(i, i + chunkSize));
+    }
 
     // Notifications (Run outside transaction)
     const absentStudentIds = attendanceData.filter((r: any) => r.status === 'ABSENT').map((r: any) => r.studentId);

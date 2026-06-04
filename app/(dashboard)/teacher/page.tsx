@@ -45,10 +45,25 @@ export default async function TeacherDashboard() {
     }
   });
 
+  // Check which classes have attendance marked today
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const classIds = todaySchedule.map((s: any) => s.classId);
+  const markedLogs = await prisma.dailyAttendanceLog.findMany({
+    where: {
+      classId: { in: classIds },
+      date: { gte: today }
+    },
+    select: { classId: true }
+  });
+  
+  const markedClassIds = markedLogs.map(l => l.classId);
+
   const stats = {
     students: studentsCount,
     classesToday: todaySchedule.length
   };
 
-  return <TeacherDashboardClient todaySchedule={todaySchedule} stats={stats} />;
+  return <TeacherDashboardClient todaySchedule={todaySchedule} stats={stats} markedClassIds={markedClassIds} />;
 }

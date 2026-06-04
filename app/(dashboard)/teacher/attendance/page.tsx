@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAttendanceStore } from "@/hooks/useAttendanceStore";
 import AttendanceToolbar from "@/components/attendance/teacher/AttendanceToolbar";
 import AttendanceGrid from "@/components/attendance/teacher/AttendanceGrid";
@@ -35,6 +36,7 @@ export default function TeacherAttendancePage() {
   const [classTotalClasses, setClassTotalClasses] = useState<number>(0);
 
   const { selectedClass, selectedDate, initAttendance, resetAttendance, attendanceMap, setFilters } = useAttendanceStore();
+  const router = useRouter();
 
   // Fetch teacher's classes
   useEffect(() => {
@@ -138,11 +140,11 @@ export default function TeacherAttendancePage() {
         setShowModal(false);
         setToastMsg("✅ Attendance saved successfully!");
         
-        // Reset the form so the teacher can select another class
+        // Redirect to dashboard so the teacher can see it's marked
         setTimeout(() => {
           setFilters(null, null, new Date());
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 1500);
+          router.push('/teacher');
+        }, 1000);
 
         setTimeout(() => setToastMsg(null), 3000);
       } else {
