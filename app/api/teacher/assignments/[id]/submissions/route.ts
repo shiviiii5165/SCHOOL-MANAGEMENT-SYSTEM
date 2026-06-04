@@ -65,8 +65,38 @@ export async function PATCH(
         marks: Number(marks),
         feedback,
         gradedAt: new Date(),
+      },
+      include: {
+        student: { include: { parent: true } },
+        assignment: true
       }
     });
+
+    // Notify student and parent
+    const notifications = [];
+    notifications.push({
+      userId: updated.student.userId,
+      title: "Assignment Graded",
+      message: `Your assignment "${updated.assignment.title}" has been graded.`,
+      type: "ACADEMIC" as any,
+      link: "/student/assignments",
+    });
+
+    if (updated.student.parent) {
+      notifications.push({
+        userId: updated.student.parent.userId,
+        title: "Assignment Graded",
+        message: `Your child's assignment "${updated.assignment.title}" has been graded.`,
+        type: "ACADEMIC" as any,
+        link: "/parent/assignments",
+      });
+    }
+
+    if (notifications.length > 0) {
+      await prisma.notification.createMany({
+        data: notifications
+      });
+    }
 
     return NextResponse.json({ success: true, submission: updated });
   } catch (error) {

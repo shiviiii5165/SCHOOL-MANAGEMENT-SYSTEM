@@ -38,6 +38,39 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    // Notify students and parents
+    const students = await prisma.student.findMany({
+      where: { classId },
+      include: { parent: true }
+    });
+
+    const notifications = [];
+    for (const student of students) {
+      notifications.push({
+        userId: student.userId,
+        title: "New Assignment",
+        message: `A new assignment "${title}" has been posted.`,
+        type: "ACADEMIC" as any,
+        link: "/student/assignments",
+      });
+
+      if (student.parent) {
+        notifications.push({
+          userId: student.parent.userId,
+          title: "New Assignment",
+          message: `A new assignment "${title}" has been posted for your child.`,
+          type: "ACADEMIC" as any,
+          link: "/parent/assignments",
+        });
+      }
+    }
+
+    if (notifications.length > 0) {
+      await prisma.notification.createMany({
+        data: notifications
+      });
+    }
+
     return NextResponse.json({ success: true, assignment });
 
   } catch (error) {
