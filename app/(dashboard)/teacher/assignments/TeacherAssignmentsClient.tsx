@@ -49,6 +49,12 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
   const [viewingSubmissionsId, setViewingSubmissionsId] = useState<string | null>(null);
   const [submissionsList, setSubmissionsList] = useState<any[]>([]);
   const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+  
+  // Grading State
+  const [gradingSubId, setGradingSubId] = useState<string | null>(null);
+  const [gradeMarks, setGradeMarks] = useState("");
+  const [gradeFeedback, setGradeFeedback] = useState("");
+  const [isGrading, setIsGrading] = useState(false);
 
   // Form State
   const [title, setTitle] = useState("");
@@ -115,6 +121,7 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
   const handleViewSubmissions = async (id: string) => {
     setViewingSubmissionsId(id);
     setIsLoadingSubmissions(true);
+    setGradingSubId(null);
     try {
       const res = await fetch(`/api/teacher/assignments/${id}/submissions`);
       const data = await res.json();
@@ -126,6 +133,47 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
     } finally {
       setIsLoadingSubmissions(false);
     }
+  };
+
+  const handleGradeSubmit = async (subId: string) => {
+    if (!gradeMarks) return;
+    setIsGrading(true);
+    try {
+      const res = await fetch(`/api/teacher/assignments/${viewingSubmissionsId}/submissions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subId, marks: gradeMarks, feedback: gradeFeedback })
+      });
+      if (res.ok) {
+        setSubmissionsList(submissionsList.map(s => 
+          s.id === subId ? { ...s, marks: Number(gradeMarks), feedback: gradeFeedback } : s
+        ));
+        
+        // Also update the graded count in the assignments list if it was previously ungraded
+        const sub = submissionsList.find(s => s.id === subId);
+        if (sub && sub.marks === null && viewingSubmissionsId) {
+           setAssignments(assignments.map(a => 
+             a.id === viewingSubmissionsId ? { ...a, graded: a.graded + 1 } : a
+           ));
+        }
+        
+        setGradingSubId(null);
+      } else {
+        alert("Failed to save grade");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error saving grade");
+    } finally {
+      setIsGrading(false);
+    }
+  };
+
+  const getFileUrl = (url: string) => {
+    if (url.includes('res.cloudinary.com') && url.includes('/upload/') && url.toLowerCase().endsWith('.pdf')) {
+      return url.replace('/upload/', '/upload/fl_attachment/');
+    }
+    return url;
   };
 
   const handlePublish = async (e: React.FormEvent) => {
@@ -584,38 +632,84 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
               ) : (
                 <div className="space-y-3">
                   {submissionsList.map(sub => (
-                    <div key={sub.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:border-primary/50 transition-colors">
-                      <div>
-                        <p className="font-medium text-text-primary">{sub.studentName}</p>
-                        <div className="flex items-center gap-3 text-xs text-text-secondary mt-1">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {new Date(sub.submittedAt).toLocaleDateString()} {new Date(sub.submittedAt).toLocaleTimeString()}
-                          </span>
-                          {sub.feedback && (
-                            <span className="truncate max-w-[200px]" title={sub.feedback}>
-                              Note: {sub.feedback}
+                    <div key={sub.id} className="flex flex-col p-4 border border-border rounded-lg hover:border-primary/50 transition-colors gap-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-text-primary">{sub.studentName}</p>
+                          <div className="flex items-center gap-3 text-xs text-text-secondary mt-1">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {new Date(sub.submittedAt).toLocaleDateString()} {new Date(sub.submittedAt).toLocaleTimeString()}
                             </span>
+                            {sub.feedback && (
+                              <span className="truncate max-w-[200px]" title={sub.feedback}>
+                                Note: {sub.feedback}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {sub.marks !== null ? (
+                            <span className="text-sm font-semibold text-status-success-text bg-status-success-bg px-2 py-1 rounded">
+                              {sub.marks} marks
+                            </span>
+                          ) : (
+                            <span className="text-xs font-medium text-status-warning-text bg-status-warning-bg px-2 py-1 rounded">
+                              Pending Grade
+                            </span>
+                          )}
+                          
+                          <button 
+                            onClick={() => {
+                              setGradingSubId(gradingSubId === sub.id ? null : sub.id);
+                              setGradeMarks(sub.marks !== null ? sub.marks.toString() : "");
+                              setGradeFeedback(sub.feedback || "");
+                            }}
+                            className="text-sm font-medium text-text-secondary hover:text-primary transition-colors border border-border px-3 py-1.5 rounded-md"
+                          >
+                            {sub.marks !== null ? "Edit Grade" : "Grade"}
+                          </button>
+
+                          {sub.fileUrl && (
+                            <a href={getFileUrl(sub.fileUrl)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-primary hover:underline bg-primary-light/50 px-3 py-1.5 rounded-md font-medium">
+                              <FileText className="w-4 h-4" />
+                              View File
+                            </a>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        {sub.marks !== null ? (
-                          <span className="text-sm font-semibold text-status-success-text bg-status-success-bg px-2 py-1 rounded">
-                            {sub.marks} marks
-                          </span>
-                        ) : (
-                          <span className="text-xs font-medium text-status-warning-text bg-status-warning-bg px-2 py-1 rounded">
-                            Pending Grade
-                          </span>
-                        )}
-                        {sub.fileUrl && (
-                          <a href={sub.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-primary hover:underline bg-primary-light/50 px-3 py-1.5 rounded-md font-medium">
-                            <FileText className="w-4 h-4" />
-                            View File
-                          </a>
-                        )}
-                      </div>
+
+                      {gradingSubId === sub.id && (
+                        <div className="bg-background border border-border p-4 rounded-lg mt-2 animate-in slide-in-from-top-2 flex flex-col sm:flex-row items-end gap-4">
+                          <div className="w-full sm:w-1/3">
+                            <label className="block text-xs font-bold text-text-secondary mb-1">Marks (out of {assignments.find(a => a.id === viewingSubmissionsId)?.maxMarks})</label>
+                            <input 
+                              type="number" 
+                              value={gradeMarks}
+                              onChange={(e) => setGradeMarks(e.target.value)}
+                              className="w-full border border-border p-2 rounded-md text-sm focus:outline-none focus:border-primary"
+                              placeholder="e.g. 45"
+                            />
+                          </div>
+                          <div className="w-full sm:w-2/3">
+                            <label className="block text-xs font-bold text-text-secondary mb-1">Feedback (Optional)</label>
+                            <input 
+                              type="text" 
+                              value={gradeFeedback}
+                              onChange={(e) => setGradeFeedback(e.target.value)}
+                              className="w-full border border-border p-2 rounded-md text-sm focus:outline-none focus:border-primary"
+                              placeholder="Great work on this..."
+                            />
+                          </div>
+                          <button 
+                            onClick={() => handleGradeSubmit(sub.id)}
+                            disabled={isGrading || !gradeMarks}
+                            className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 shrink-0"
+                          >
+                            {isGrading ? "Saving..." : "Save"}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -46,3 +46,31 @@ export async function GET(
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await auth();
+    if (!session || session.user?.role !== "TEACHER") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { subId, marks, feedback } = await req.json();
+
+    const updated = await prisma.submission.update({
+      where: { id: subId },
+      data: {
+        marks: Number(marks),
+        feedback,
+        gradedAt: new Date(),
+      }
+    });
+
+    return NextResponse.json({ success: true, submission: updated });
+  } catch (error) {
+    console.error("Grade submission error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
