@@ -34,7 +34,7 @@ export default function TeacherAttendancePage() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [classTotalClasses, setClassTotalClasses] = useState<number>(0);
 
-  const { selectedClass, selectedDate, initAttendance, resetAttendance, attendanceMap } = useAttendanceStore();
+  const { selectedClass, selectedDate, initAttendance, resetAttendance, attendanceMap, setFilters } = useAttendanceStore();
 
   // Fetch teacher's classes
   useEffect(() => {
@@ -137,6 +137,13 @@ export default function TeacherAttendancePage() {
       if (res.ok) {
         setShowModal(false);
         setToastMsg("✅ Attendance saved successfully!");
+        
+        // Reset the form so the teacher can select another class
+        setTimeout(() => {
+          setFilters(null, null, new Date());
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 1500);
+
         setTimeout(() => setToastMsg(null), 3000);
       } else {
         const err = await res.json();
