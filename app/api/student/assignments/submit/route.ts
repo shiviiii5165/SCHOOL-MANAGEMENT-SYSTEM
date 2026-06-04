@@ -25,22 +25,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Student profile not found" }, { status: 403 });
     }
 
-    // Since schema doesn't have a unique constraint on assignmentId_studentId, we use findFirst + update/create logic
-    const existing = await prisma.submission.findFirst({
-        where: { assignmentId, studentId: student.id }
+    // Use upsert with the unique constraint on (assignmentId, studentId)
+    const submission = await prisma.submission.upsert({
+      where: { assignmentId_studentId: { assignmentId, studentId: student.id } },
+      update: { fileUrl, feedback: feedback || null, submittedAt: new Date() },
+      create: { assignmentId, studentId: student.id, fileUrl, feedback: feedback || null, submittedAt: new Date() },
     });
-    
-    let submission;
-    if (existing) {
-        submission = await prisma.submission.update({
-            where: { id: existing.id },
-            data: { fileUrl, feedback: feedback || null, submittedAt: new Date() }
-        });
-    } else {
-        submission = await prisma.submission.create({
-            data: { assignmentId, studentId: student.id, fileUrl, feedback: feedback || null, submittedAt: new Date() }
-        });
-    }
 
     return NextResponse.json({ success: true, submission });
 

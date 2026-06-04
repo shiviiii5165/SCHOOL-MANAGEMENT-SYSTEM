@@ -16,7 +16,7 @@ import type { NextAuthConfig } from "next-auth";export const authConfig = {
       }
     }
   },
-  secret: process.env.AUTH_SECRET || "1fac3ae321d234091f73bd6ddf3522f5f2cb6c94fa122705690964f05b972b7d",
+  secret: process.env.AUTH_SECRET,
   trustHost: true,
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {

@@ -14,6 +14,7 @@ export default function LayoutClientWrapper({
   user: { name: string; role: string; avatar?: string };
 }) {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
   const isMessagesPage = pathname.includes('/messages');
 
@@ -24,16 +25,20 @@ export default function LayoutClientWrapper({
     ? (hasBottomNav ? 'h-[calc(100dvh-128px)] md:h-[calc(100dvh-64px)]' : 'h-[calc(100dvh-64px)]')
     : '';
 
+  const sidebarMargin = sidebarCollapsed ? 'md:ml-[72px]' : 'md:ml-[240px]';
+
   return (
     <div className={`bg-background flex w-full relative overflow-x-hidden ${isMessagesPage ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh]'}`}>
       {/* Sidebar (Desktop and Mobile Drawer) */}
       <Sidebar 
         user={user} 
         isOpenMobile={isMobileDrawerOpen} 
-        onCloseMobile={() => setIsMobileDrawerOpen(false)} 
+        onCloseMobile={() => setIsMobileDrawerOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
       />
 
-      <div className={`flex-1 flex flex-col transition-all duration-300 w-full ml-0 md:ml-[240px] ${hasBottomNav ? 'pb-16 md:pb-0' : ''} ${isMessagesPage ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh]'}`}>
+      <div className={`flex-1 flex flex-col transition-all duration-300 w-full ml-0 ${sidebarMargin} ${hasBottomNav ? 'pb-16 md:pb-0' : ''} ${isMessagesPage ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh]'}`}>
         <Topbar 
           user={user} 
           onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)} 

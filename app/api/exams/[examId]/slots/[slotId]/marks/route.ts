@@ -9,7 +9,7 @@ import { calculateGrade } from "@/lib/examUtils";
 export async function GET(req: NextRequest, { params }: { params: { examId: string; slotId: string } }) {
   try {
     const session = await auth();
-    if (!session?.user) {
+    if (!session?.user || !['ADMIN', 'TEACHER'].includes(session.user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

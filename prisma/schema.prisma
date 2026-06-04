@@ -80,6 +80,7 @@ model Student {
   hallTickets          HallTicket[]
   installmentPlans     InstallmentPlan[]
   payments             Payment[]
+  submissions          Submission[]
   class                Class              @relation(fields: [classId], references: [id])
   parent               Parent?            @relation(fields: [parentId], references: [id])
   user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -104,6 +105,7 @@ model Teacher {
   DailyAttendanceLog  DailyAttendanceLog[]
   reportedDisciplines DisciplineReport[]
   subjects            Subject[]
+  assignments         Assignment[]
   user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   timetablePeriods    TimetablePeriod[]
 }
@@ -195,7 +197,10 @@ model Assignment {
   createdAt   DateTime     @default(now())
   class       Class        @relation(fields: [classId], references: [id])
   subject     Subject      @relation(fields: [subjectId], references: [id])
+  teacher     Teacher      @relation(fields: [teacherId], references: [id])
   submissions Submission[]
+
+  @@index([teacherId])
 }
 
 model Submission {
@@ -208,6 +213,10 @@ model Submission {
   feedback     String?
   gradedAt     DateTime?
   assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  student      Student    @relation(fields: [studentId], references: [id])
+
+  @@unique([assignmentId, studentId])
+  @@index([studentId])
 }
 
 model Result {

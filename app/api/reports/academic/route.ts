@@ -11,50 +11,52 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 1. Fetch Subject Averages via Prisma Aggregation
-    const subjectAverages = await prisma.result.groupBy({
-      by: ['subjectId'],
-      _avg: {
-        marks: true,
-      },
+    // 1. Fetch Subject Averages by fetching ExamResults and aggregating manually
+    // (since subjectId is on the related ExamSlot model)
+    const results = await prisma.examResult.findMany({
+      where: { marks: { not: null } },
+      include: { slot: { include: { subject: true } } },
     });
 
-    const subjectComparisonChart = subjectAverages.map(avg => ({
-      name: `Subject ${avg.subjectId.substring(0, 4)}`,
-      average: avg._avg.marks || 0,
+    const subjectMap: Record<string, { totalMarks: number; count: number; name: string }> = {};
+    results.forEach(r => {
+      if (r.marks !== null) {
+        const subId = r.slot.subject.id;
+        if (!subjectMap[subId]) {
+          subjectMap[subId] = { totalMarks: 0, count: 0, name: r.slot.subject.name };
+        }
+        subjectMap[subId].totalMarks += r.marks;
+        subjectMap[subId].count += 1;
+      }
+    });
+
+    const subjectComparisonChart = Object.values(subjectMap).map(s => ({
+      name: s.name,
+      average: s.totalMarks / s.count,
     }));
 
-    // 2. Fetch Top Performers using aggregation to sum marks
-    const studentSums = await prisma.result.groupBy({
+    // 2. Fetch Top Performers using ExamSummary aggregation
+    const studentAverages = await prisma.examSummary.groupBy({
       by: ['studentId'],
-      _sum: {
-        marks: true,
-        maxMarks: true,
-      },
-      orderBy: {
-        _sum: {
-          marks: 'desc',
-        },
-      },
+      _avg: { percentage: true },
+      orderBy: { _avg: { percentage: 'desc' } },
       take: 10,
     });
 
-    const topStudentIds = studentSums.map(s => s.studentId);
+    const topStudentIds = studentAverages.map(s => s.studentId);
     const students = await prisma.student.findMany({
       where: { id: { in: topStudentIds } },
       include: { user: true, class: true },
     });
 
-    const topPerformers = studentSums.map(s => {
+    const topPerformers = studentAverages.map(s => {
       const student = students.find(st => st.id === s.studentId);
-      const sumMarks = s._sum.marks || 0;
-      const sumMax = s._sum.maxMarks || 1;
       return {
         name: student?.user?.name || "Unknown",
         className: student ? `${student.class.name} ${student.class.section}` : "Unknown",
-        percentage: (sumMarks / sumMax) * 100,
+        percentage: s._avg.percentage || 0,
       };
-    }).sort((a, b) => b.percentage - a.percentage);
+    });
 
     return NextResponse.json({
       topPerformers,

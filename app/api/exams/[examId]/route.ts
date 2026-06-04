@@ -12,6 +12,8 @@ export async function GET(req: NextRequest, { params }: { params: { examId: stri
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const role = session.user.role;
+
     const exam = await prisma.exam.findUnique({
       where: { id: params.examId },
       include: {
@@ -32,6 +34,27 @@ export async function GET(req: NextRequest, { params }: { params: { examId: stri
     if (!exam) {
       return NextResponse.json({ error: "Exam not found" }, { status: 404 });
     }
+
+    // Role-based filtering: STUDENT/PARENT should only see their own data
+    if (role === 'STUDENT') {
+      const student = await prisma.student.findUnique({ where: { userId: session.user.id } });
+      if (student) {
+        exam.summaries = exam.summaries.filter(s => s.studentId === student.id);
+        exam.hallTickets = exam.hallTickets.filter(h => h.studentId === student.id);
+        for (const slot of exam.slots) {
+          slot.results = slot.results.filter(r => r.studentId === student.id);
+        }
+      }
+    } else if (role === 'PARENT') {
+      const parent = await prisma.parent.findUnique({ where: { userId: session.user.id }, include: { students: true } });
+      const childIds = parent?.students.map(s => s.id) || [];
+      exam.summaries = exam.summaries.filter(s => childIds.includes(s.studentId));
+      exam.hallTickets = exam.hallTickets.filter(h => childIds.includes(h.studentId));
+      for (const slot of exam.slots) {
+        slot.results = slot.results.filter(r => childIds.includes(r.studentId));
+      }
+    }
+    // ADMIN and TEACHER get full data (no filtering)
 
     return NextResponse.json({ exam });
   } catch (error: any) {

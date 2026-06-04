@@ -110,7 +110,11 @@ export async function middleware(req: NextRequest) {
 
   // Add security headers to response
   const response = NextResponse.next()
-  response.headers.set('X-User-Role', role)  // useful for debugging
+  
+  if (process.env.NODE_ENV === 'development') {
+    response.headers.set('X-User-Role', role)  // useful for debugging
+  }
+  
   return response
 }
 

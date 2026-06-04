@@ -213,13 +213,24 @@ export async function POST(req: NextRequest) {
         include: { user: true, parent: true }
       });
       
-      const notifications = absentStudents.map(student => ({
-        userId: student.parent?.userId,
-        title: 'Attendance Alert',
-        message: `${student.user.name} was marked ABSENT today (${parsedDate.toLocaleDateString()}).`,
-        type: 'ATTENDANCE' as any,
-        link: '/parent/attendance'
-      }));
+      const notifications = absentStudents.flatMap(student => [
+        // Notify the student
+        {
+          userId: student.userId,
+          title: 'Attendance Alert',
+          message: `You were marked ABSENT today (${parsedDate.toLocaleDateString()}).`,
+          type: 'ATTENDANCE' as any,
+          link: '/student/attendance'
+        },
+        // Notify the parent
+        {
+          userId: student.parent?.userId,
+          title: 'Attendance Alert',
+          message: `${student.user.name} was marked ABSENT today (${parsedDate.toLocaleDateString()}).`,
+          type: 'ATTENDANCE' as any,
+          link: '/parent/attendance'
+        }
+      ]);
       await createNotifications(notifications);
     }
 

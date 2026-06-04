@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -15,13 +15,16 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function Sidebar({ 
   user, 
   isOpenMobile, 
-  onCloseMobile 
+  onCloseMobile,
+  collapsed,
+  onToggleCollapse 
 }: { 
   user: { name: string; role: string; avatar?: string };
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const navItems = getNavItems(user.role);
 
@@ -39,13 +42,13 @@ export default function Sidebar({
   
   const badges = badgeData?.badges || {};
 
-  // Auto-clear notifications when visiting a page
+  // Auto-clear notifications when visiting a page (with ref to prevent render loop)
+  const lastClearedRef = useRef<string>('');
   useEffect(() => {
-    // If we have unread notifications for this exact pathname, mark them read
     const checkAndClear = async () => {
-      // Small optimization: only send if we think there's a badge, OR just aggressively send
-      // to ensure the DB is cleared. We'll send if there's a badge to save network.
-      if (badges[pathname] > 0) {
+      // Only clear if we haven't already cleared for this pathname
+      if (badges[pathname] > 0 && lastClearedRef.current !== pathname) {
+        lastClearedRef.current = pathname;
         // Optimistic UI clear
         mutateBadges({ badges: { ...badges, [pathname]: 0 } }, false);
         await fetch('/api/notifications', {
@@ -58,7 +61,7 @@ export default function Sidebar({
       }
     };
     checkAndClear();
-  }, [pathname, badges, mutateBadges]);
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -166,7 +169,7 @@ export default function Sidebar({
         </button>
 
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={onToggleCollapse}
           aria-label="Toggle Sidebar"
           className="items-center justify-center h-10 w-full rounded-lg hover:bg-background text-text-muted transition-colors hidden md:flex"
         >
