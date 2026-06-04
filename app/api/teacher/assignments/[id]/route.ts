@@ -31,9 +31,14 @@ export async function DELETE(
       return NextResponse.json({ error: "Not authorized to delete this assignment" }, { status: 403 });
     }
 
-    await prisma.assignment.delete({
-      where: { id: assignmentId },
-    });
+    await prisma.$transaction([
+      prisma.submission.deleteMany({
+        where: { assignmentId },
+      }),
+      prisma.assignment.delete({
+        where: { id: assignmentId },
+      }),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

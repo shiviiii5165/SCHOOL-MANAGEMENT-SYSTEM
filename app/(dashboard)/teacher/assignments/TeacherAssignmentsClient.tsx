@@ -170,9 +170,6 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
   };
 
   const getFileUrl = (url: string) => {
-    if (url.includes('res.cloudinary.com') && url.includes('/upload/') && url.toLowerCase().endsWith('.pdf')) {
-      return url.replace('/upload/', '/upload/fl_attachment/');
-    }
     return url;
   };
 
