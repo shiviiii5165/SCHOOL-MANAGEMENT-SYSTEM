@@ -53,8 +53,10 @@ export default async function StudentAssignmentsPage() {
         dueDate: a.dueDate ? a.dueDate.toISOString() : new Date().toISOString(),
         maxMarks: a.maxMarks || 0,
         description: a.description || "",
+        fileUrl: a.fileUrl || undefined,
         submission: submission ? {
           submittedAt: submission.submittedAt ? submission.submittedAt.toISOString() : new Date().toISOString(),
+          fileUrl: submission.fileUrl || undefined,
           marks: submission.marks ?? undefined,
           feedback: submission.feedback ?? undefined,
           gradedAt: submission.gradedAt ? submission.gradedAt.toISOString() : undefined

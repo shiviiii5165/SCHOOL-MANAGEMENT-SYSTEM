@@ -40,8 +40,6 @@ export default async function TeacherAssignmentsPage() {
   const formattedAssignments = await Promise.all(assignments.map(async a => {
     const totalStudents = await prisma.student.count({ where: { classId: a.classId } });
     
-    // Status logic: if past due date it's CLOSED (unless draft). 
-    // For simplicity, everything is ACTIVE if dueDate is future, CLOSED if past.
     const isPastDue = new Date(a.dueDate).getTime() < Date.now();
     let status: "ACTIVE" | "CLOSED" | "DRAFT" = isPastDue ? "CLOSED" : "ACTIVE";
     
@@ -56,9 +54,13 @@ export default async function TeacherAssignmentsPage() {
       submitted: a._count.submissions,
       graded: a.submissions.filter(s => s.marks !== null).length,
       status,
-      createdAt: a.createdAt.toISOString()
+      createdAt: a.createdAt.toISOString(),
+      fileUrl: a.fileUrl,
     };
   }));
 
-  return <TeacherAssignmentsClient initialAssignments={formattedAssignments} />;
+  const subjects = await prisma.subject.findMany({ select: { id: true, name: true } });
+  const classes = await prisma.class.findMany({ select: { id: true, name: true, section: true } });
+
+  return <TeacherAssignmentsClient initialAssignments={formattedAssignments} subjects={subjects} classes={classes} />;
 }

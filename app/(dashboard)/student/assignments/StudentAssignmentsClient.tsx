@@ -34,7 +34,78 @@ export default function StudentAssignmentsClient({ initialAssignments }: Student
   const [activeTab, setActiveTab] = useState<Tab>("all");
   const [showSubmitModal, setShowSubmitModal] = useState<string | null>(null);
 
-  const assignments = initialAssignments; // Just alias for the rest of the code
+  // Form State
+  const [file, setFile] = useState<File | null>(null);
+  const [feedback, setFeedback] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [assignments, setAssignments] = useState(initialAssignments);
+
+  const handleSubmit = async (assignmentId: string) => {
+    if (!file) {
+      setErrorMsg("Please select a file to upload.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMsg("");
+
+    try {
+      // 1. Upload File
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) {
+        throw new Error(uploadData.error || "File upload failed");
+      }
+
+      // 2. Submit Assignment
+      const submitRes = await fetch("/api/student/assignments/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignmentId,
+          fileUrl: uploadData.url,
+          feedback,
+        }),
+      });
+
+      const submitData = await submitRes.json();
+      if (!submitRes.ok) {
+        throw new Error(submitData.error || "Failed to submit assignment");
+      }
+
+      // Update local state to reflect submission
+      setAssignments(assignments.map(a => {
+        if (a.id === assignmentId) {
+          return {
+            ...a,
+            submission: {
+              submittedAt: new Date().toISOString(),
+              fileUrl: uploadData.url,
+              feedback,
+            }
+          };
+        }
+        return a;
+      }));
+
+      setShowSubmitModal(null);
+      setFile(null);
+      setFeedback("");
+      
+    } catch (err: any) {
+      setErrorMsg(err.message || "An error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const getStatus = (a: StudentAssignment): "graded" | "submitted" | "pending" | "overdue" => {
     if (a.submission?.marks !== undefined) return "graded";
@@ -158,6 +229,12 @@ export default function StudentAssignmentsClient({ initialAssignments }: Student
                         <FileText className="w-3.5 h-3.5 text-text-muted" />
                         {assignment.maxMarks} marks
                       </span>
+                      {assignment.fileUrl && (
+                        <a href={assignment.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-primary hover:underline">
+                          <FileText className="w-3.5 h-3.5" />
+                          View Attachment
+                        </a>
+                      )}
                     </div>
                   </div>
 
@@ -240,18 +317,36 @@ export default function StudentAssignmentsClient({ initialAssignments }: Student
                 <p className="text-xs text-text-muted mt-1">{selectedAssignment.subject} • {selectedAssignment.maxMarks} marks</p>
               </div>
 
+              {errorMsg && <div className="text-status-danger-text text-sm font-medium mb-3">{errorMsg}</div>}
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1.5">Upload your work</label>
-                <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 hover:bg-primary-light/30 transition-colors cursor-pointer group">
-                  <Upload className="w-10 h-10 text-text-muted mx-auto mb-3 group-hover:text-primary transition-colors" />
-                  <p className="text-sm font-medium text-text-primary">Click to upload or drag and drop</p>
-                  <p className="text-xs text-text-muted mt-1">PDF, DOCX, PNG, PY up to 10MB</p>
+                <div className="relative border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 hover:bg-primary-light/30 transition-colors group">
+                  <input 
+                    type="file" 
+                    onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  {file ? (
+                    <div className="flex flex-col items-center">
+                      <CheckCircle2 className="w-10 h-10 text-status-success mx-auto mb-3" />
+                      <p className="text-sm font-medium text-text-primary">{file.name}</p>
+                      <p className="text-xs text-text-muted mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-10 h-10 text-text-muted mx-auto mb-3 group-hover:text-primary transition-colors" />
+                      <p className="text-sm font-medium text-text-primary">Click to upload or drag and drop</p>
+                      <p className="text-xs text-text-muted mt-1">PDF, DOCX, PNG, PY up to 10MB</p>
+                    </>
+                  )}
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1.5">Note (Optional)</label>
                 <textarea
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
                   rows={2}
                   placeholder="Any note for your teacher..."
                   className="w-full border border-border rounded-md px-4 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none"
@@ -266,8 +361,13 @@ export default function StudentAssignmentsClient({ initialAssignments }: Student
               >
                 Cancel
               </button>
-              <button className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-md text-sm font-medium transition-colors shadow-sm">
-                Submit Assignment
+              <button 
+                onClick={() => handleSubmit(selectedAssignment.id)}
+                disabled={isSubmitting || !file}
+                className="px-6 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-md text-sm font-medium transition-colors shadow-sm disabled:opacity-70 flex items-center gap-2"
+              >
+                {isSubmitting ? <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : null}
+                {isSubmitting ? "Submitting..." : "Submit Assignment"}
               </button>
             </div>
           </div>

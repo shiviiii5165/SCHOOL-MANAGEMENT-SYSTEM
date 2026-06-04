@@ -30,18 +30,97 @@ const statusConfig: Record<string, { label: string, bg: string, text: string, do
 
 interface TeacherAssignmentsClientProps {
   initialAssignments: Assignment[];
+  subjects: {id: string, name: string}[];
+  classes: {id: string, name: string, section: string}[];
 }
 
-export default function TeacherAssignmentsClient({ initialAssignments }: TeacherAssignmentsClientProps) {
+export default function TeacherAssignmentsClient({ initialAssignments, subjects, classes }: TeacherAssignmentsClientProps) {
   const [mounted, setMounted] = useState(false);
-  const [assignments] = useState<Assignment[]>(initialAssignments);
+  const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments);
   const [showModal, setShowModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
+  // Form State
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [subjectId, setSubjectId] = useState(subjects[0]?.id || "");
+  const [classId, setClassId] = useState(classes[0]?.id || "");
+  const [dueDate, setDueDate] = useState("");
+  const [maxMarks, setMaxMarks] = useState("50");
+  const [file, setFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handlePublish = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title || !subjectId || !classId || !dueDate || !maxMarks) {
+      setErrorMsg("Please fill in all required fields.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMsg("");
+
+    try {
+      let fileUrl = "";
+      
+      // 1. Upload File if selected
+      if (file) {
+        const formData = new FormData();
+        formData.append("file", file);
+        
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) {
+          throw new Error(uploadData.error || "File upload failed");
+        }
+        fileUrl = uploadData.url;
+      }
+
+      // 2. Create Assignment
+      const createRes = await fetch("/api/teacher/assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description,
+          subjectId,
+          classId,
+          dueDate,
+          maxMarks: Number(maxMarks),
+          fileUrl,
+        }),
+      });
+
+      const createData = await createRes.json();
+      if (!createRes.ok) {
+        throw new Error(createData.error || "Failed to create assignment");
+      }
+
+      // Append locally for now to show immediate update
+      setAssignments([createData.assignment, ...assignments]);
+      setShowModal(false);
+      
+      // Reset form
+      setTitle("");
+      setDescription("");
+      setFile(null);
+      
+    } catch (err: any) {
+      setErrorMsg(err.message || "An error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const filtered = filterStatus === "ALL"
     ? assignments
@@ -173,6 +252,12 @@ export default function TeacherAssignmentsClient({ initialAssignments }: Teacher
                         <BookOpen className="w-3.5 h-3.5 text-text-muted" />
                         Max: {assignment.maxMarks} marks
                       </span>
+                      {assignment.fileUrl && (
+                        <a href={assignment.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-primary hover:underline">
+                          <FileText className="w-3.5 h-3.5" />
+                          View Attachment
+                        </a>
+                      )}
                     </div>
                   </div>
 
@@ -249,11 +334,14 @@ export default function TeacherAssignmentsClient({ initialAssignments }: Teacher
             </div>
 
             <div className="p-6 space-y-5">
+              {errorMsg && <div className="text-status-danger-text text-sm font-medium mb-3">{errorMsg}</div>}
               {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1.5">Title</label>
                 <input
                   type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., Chapter 5 Practice Problems"
                   className="w-full border border-border rounded-md px-4 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
                 />
@@ -263,20 +351,22 @@ export default function TeacherAssignmentsClient({ initialAssignments }: Teacher
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-1.5">Subject</label>
-                  <select className="w-full border border-border rounded-md px-4 py-2.5 text-sm bg-surface focus:outline-none focus:border-primary">
-                    <option>Mathematics</option>
-                    <option>English</option>
-                    <option>Chemistry</option>
-                    <option>Computer Science</option>
-                    <option>History</option>
+                  <select 
+                    value={subjectId}
+                    onChange={(e) => setSubjectId(e.target.value)}
+                    className="w-full border border-border rounded-md px-4 py-2.5 text-sm bg-surface focus:outline-none focus:border-primary"
+                  >
+                    {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-1.5">Class</label>
-                  <select className="w-full border border-border rounded-md px-4 py-2.5 text-sm bg-surface focus:outline-none focus:border-primary">
-                    <option>Class 10 - A</option>
-                    <option>Class 10 - B</option>
-                    <option>Class 9 - C</option>
+                  <select 
+                    value={classId}
+                    onChange={(e) => setClassId(e.target.value)}
+                    className="w-full border border-border rounded-md px-4 py-2.5 text-sm bg-surface focus:outline-none focus:border-primary"
+                  >
+                    {classes.map(c => <option key={c.id} value={c.id}>{c.name} - {c.section}</option>)}
                   </select>
                 </div>
               </div>
@@ -285,6 +375,8 @@ export default function TeacherAssignmentsClient({ initialAssignments }: Teacher
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1.5">Description</label>
                 <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   rows={3}
                   placeholder="Describe the assignment requirements..."
                   className="w-full border border-border rounded-md px-4 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none"
@@ -297,6 +389,8 @@ export default function TeacherAssignmentsClient({ initialAssignments }: Teacher
                   <label className="block text-sm font-medium text-text-primary mb-1.5">Due Date</label>
                   <input
                     type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
                     className="w-full border border-border rounded-md px-4 py-2.5 text-sm bg-surface focus:outline-none focus:border-primary"
                   />
                 </div>
@@ -304,6 +398,8 @@ export default function TeacherAssignmentsClient({ initialAssignments }: Teacher
                   <label className="block text-sm font-medium text-text-primary mb-1.5">Max Marks</label>
                   <input
                     type="number"
+                    value={maxMarks}
+                    onChange={(e) => setMaxMarks(e.target.value)}
                     placeholder="50"
                     className="w-full border border-border rounded-md px-4 py-2.5 text-sm focus:outline-none focus:border-primary"
                   />
@@ -313,10 +409,25 @@ export default function TeacherAssignmentsClient({ initialAssignments }: Teacher
               {/* File Upload */}
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1.5">Attachment (Optional)</label>
-                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 hover:bg-primary-light/30 transition-colors cursor-pointer group">
-                  <Upload className="w-8 h-8 text-text-muted mx-auto mb-2 group-hover:text-primary transition-colors" />
-                  <p className="text-sm text-text-secondary">Click to upload or drag and drop</p>
-                  <p className="text-xs text-text-muted mt-1">PDF, DOCX, PNG up to 10MB</p>
+                <div className="relative border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 hover:bg-primary-light/30 transition-colors group">
+                  <input 
+                    type="file" 
+                    onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  {file ? (
+                    <div className="flex flex-col items-center">
+                      <CheckCircle2 className="w-8 h-8 text-status-success mx-auto mb-2" />
+                      <p className="text-sm font-medium text-text-primary">{file.name}</p>
+                      <p className="text-xs text-text-muted mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 text-text-muted mx-auto mb-2 group-hover:text-primary transition-colors" />
+                      <p className="text-sm text-text-secondary">Click to upload or drag and drop</p>
+                      <p className="text-xs text-text-muted mt-1">PDF, DOCX, PNG up to 10MB</p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -331,8 +442,13 @@ export default function TeacherAssignmentsClient({ initialAssignments }: Teacher
               <button className="px-4 py-2.5 bg-status-warning hover:bg-status-warning/90 text-white rounded-md text-sm font-medium transition-colors">
                 Save as Draft
               </button>
-              <button className="px-4 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-md text-sm font-medium transition-colors shadow-sm">
-                Publish
+              <button 
+                onClick={handlePublish}
+                disabled={isSubmitting}
+                className="px-4 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-md text-sm font-medium transition-colors shadow-sm disabled:opacity-70 flex items-center gap-2"
+              >
+                {isSubmitting ? <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : null}
+                {isSubmitting ? "Publishing..." : "Publish"}
               </button>
             </div>
           </div>
@@ -341,3 +457,4 @@ export default function TeacherAssignmentsClient({ initialAssignments }: Teacher
     </div>
   );
 }
+
