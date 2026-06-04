@@ -42,6 +42,14 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  // For Submissions Modal
+  const [viewingSubmissionsId, setViewingSubmissionsId] = useState<string | null>(null);
+  const [submissionsList, setSubmissionsList] = useState<any[]>([]);
+  const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+
   // Form State
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -56,6 +64,69 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const openNewModal = () => {
+    setEditingId(null);
+    setTitle("");
+    setDescription("");
+    setSubjectId(subjects[0]?.id || "");
+    setClassId(classes[0]?.id || "");
+    setDueDate("");
+    setMaxMarks("50");
+    setFile(null);
+    setErrorMsg("");
+    setShowModal(true);
+  };
+
+  const openEditModal = (assignment: Assignment) => {
+    setEditingId(assignment.id);
+    setTitle(assignment.title);
+    // Since we don't have description in the client Assignment interface by default, it might be empty if we didn't fetch it, 
+    // but we can try to find it or just leave blank to fetch later if needed. For now, empty is fine.
+    setDescription(""); 
+    
+    // Reverse lookup subjectId and classId
+    const s = subjects.find(s => s.name === assignment.subject);
+    if (s) setSubjectId(s.id);
+    const c = classes.find(c => `${c.name} - ${c.section}` === assignment.className);
+    if (c) setClassId(c.id);
+    
+    setDueDate(assignment.dueDate.split('T')[0]); // format for input type="date"
+    setMaxMarks(assignment.maxMarks.toString());
+    setFile(null);
+    setErrorMsg("");
+    setShowModal(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this assignment?")) return;
+    setIsDeleting(id);
+    try {
+      const res = await fetch(`/api/teacher/assignments/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error("Failed to delete");
+      setAssignments(assignments.filter(a => a.id !== id));
+    } catch (err) {
+      alert("Failed to delete assignment");
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
+  const handleViewSubmissions = async (id: string) => {
+    setViewingSubmissionsId(id);
+    setIsLoadingSubmissions(true);
+    try {
+      const res = await fetch(`/api/teacher/assignments/${id}/submissions`);
+      const data = await res.json();
+      if (res.ok) {
+        setSubmissionsList(data.submissions || []);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingSubmissions(false);
+    }
+  };
 
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,9 +158,12 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
         fileUrl = uploadData.url;
       }
 
-      // 2. Create Assignment
-      const createRes = await fetch("/api/teacher/assignments", {
-        method: "POST",
+      // 2. Create or Update Assignment
+      const method = editingId ? "PUT" : "POST";
+      const url = editingId ? `/api/teacher/assignments/${editingId}` : "/api/teacher/assignments";
+
+      const createRes = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
@@ -115,15 +189,19 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
         className: classes.find(c => c.id === classId) ? `${classes.find(c => c.id === classId)?.name} - ${classes.find(c => c.id === classId)?.section}` : "Class",
         dueDate: createData.assignment.dueDate,
         maxMarks: createData.assignment.maxMarks,
-        totalStudents: 0,
-        submitted: 0,
-        graded: 0,
+        totalStudents: editingId ? (assignments.find(a => a.id === editingId)?.totalStudents || 0) : 0,
+        submitted: editingId ? (assignments.find(a => a.id === editingId)?.submitted || 0) : 0,
+        graded: editingId ? (assignments.find(a => a.id === editingId)?.graded || 0) : 0,
         status: "ACTIVE" as const,
         createdAt: createData.assignment.createdAt,
         fileUrl: createData.assignment.fileUrl
       };
       
-      setAssignments([newAssignment, ...assignments]);
+      if (editingId) {
+        setAssignments(assignments.map(a => a.id === editingId ? newAssignment : a));
+      } else {
+        setAssignments([newAssignment, ...assignments]);
+      }
       setShowModal(false);
       
       // Reset form
@@ -189,7 +267,7 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
             )}
           </div>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={openNewModal}
             className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
@@ -299,14 +377,19 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="p-2 text-text-muted hover:text-primary hover:bg-primary-light rounded-md transition-colors" title="View Submissions">
+                      <button onClick={() => handleViewSubmissions(assignment.id)} className="p-2 text-text-muted hover:text-primary hover:bg-primary-light rounded-md transition-colors" title="View Submissions">
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button className="p-2 text-text-muted hover:text-role-teacher hover:bg-role-teacher/10 rounded-md transition-colors" title="Edit">
+                      <button onClick={() => openEditModal(assignment)} className="p-2 text-text-muted hover:text-role-teacher hover:bg-role-teacher/10 rounded-md transition-colors" title="Edit">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button className="p-2 text-text-muted hover:text-status-danger-text hover:bg-status-danger-bg rounded-md transition-colors" title="Delete">
-                        <Trash2 className="w-4 h-4" />
+                      <button 
+                        onClick={() => handleDelete(assignment.id)} 
+                        disabled={isDeleting === assignment.id}
+                        className="p-2 text-text-muted hover:text-status-danger-text hover:bg-status-danger-bg rounded-md transition-colors disabled:opacity-50" 
+                        title="Delete"
+                      >
+                        {isDeleting === assignment.id ? <span className="w-4 h-4 border-2 border-text-muted border-t-transparent rounded-full animate-spin inline-block" /> : <Trash2 className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
@@ -343,7 +426,7 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-surface rounded-2xl shadow-modal w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-border">
-              <h2 className="text-lg font-display font-bold text-text-primary">New Assignment</h2>
+              <h2 className="text-lg font-display font-bold text-text-primary">{editingId ? "Edit Assignment" : "New Assignment"}</h2>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-background rounded transition-colors">
                 <X className="w-5 h-5 text-text-muted" />
               </button>
@@ -464,7 +547,84 @@ export default function TeacherAssignmentsClient({ initialAssignments, subjects,
                 className="px-4 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-md text-sm font-medium transition-colors shadow-sm disabled:opacity-70 flex items-center gap-2"
               >
                 {isSubmitting ? <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : null}
-                {isSubmitting ? "Publishing..." : "Publish"}
+                {isSubmitting ? (editingId ? "Saving..." : "Publishing...") : (editingId ? "Save Changes" : "Publish")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Submissions Modal */}
+      {viewingSubmissionsId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-surface rounded-2xl shadow-modal w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <div>
+                <h2 className="text-lg font-display font-bold text-text-primary">Student Submissions</h2>
+                <p className="text-sm text-text-secondary mt-1">
+                  {assignments.find(a => a.id === viewingSubmissionsId)?.title}
+                </p>
+              </div>
+              <button onClick={() => setViewingSubmissionsId(null)} className="p-1 hover:bg-background rounded transition-colors">
+                <X className="w-5 h-5 text-text-muted" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1">
+              {isLoadingSubmissions ? (
+                <div className="flex justify-center items-center py-12">
+                  <span className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></span>
+                </div>
+              ) : submissionsList.length === 0 ? (
+                <div className="text-center py-12 bg-background rounded-lg border border-border">
+                  <FileText className="w-12 h-12 text-text-muted mx-auto mb-3" />
+                  <p className="text-text-primary font-medium">No submissions yet</p>
+                  <p className="text-sm text-text-secondary mt-1">Students haven't submitted their work for this assignment.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {submissionsList.map(sub => (
+                    <div key={sub.id} className="flex items-center justify-between p-4 border border-border rounded-lg hover:border-primary/50 transition-colors">
+                      <div>
+                        <p className="font-medium text-text-primary">{sub.studentName}</p>
+                        <div className="flex items-center gap-3 text-xs text-text-secondary mt-1">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(sub.submittedAt).toLocaleDateString()} {new Date(sub.submittedAt).toLocaleTimeString()}
+                          </span>
+                          {sub.feedback && (
+                            <span className="truncate max-w-[200px]" title={sub.feedback}>
+                              Note: {sub.feedback}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        {sub.marks !== null ? (
+                          <span className="text-sm font-semibold text-status-success-text bg-status-success-bg px-2 py-1 rounded">
+                            {sub.marks} marks
+                          </span>
+                        ) : (
+                          <span className="text-xs font-medium text-status-warning-text bg-status-warning-bg px-2 py-1 rounded">
+                            Pending Grade
+                          </span>
+                        )}
+                        {sub.fileUrl && (
+                          <a href={sub.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-primary hover:underline bg-primary-light/50 px-3 py-1.5 rounded-md font-medium">
+                            <FileText className="w-4 h-4" />
+                            View File
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-6 border-t border-border bg-background/50 flex justify-end rounded-b-2xl">
+              <button onClick={() => setViewingSubmissionsId(null)} className="px-4 py-2 border border-border bg-surface hover:bg-background rounded-md text-sm font-medium transition-colors">
+                Close
               </button>
             </div>
           </div>
