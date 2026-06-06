@@ -59,18 +59,16 @@ export default function NotificationBell({ role }: { role: string }) {
 
   // Click-outside-to-close
   useEffect(() => {
-    if (!open) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      if (open && panelRef.current && !panelRef.current.contains(e.target as Node)) {
         setOpen(false);
         mutate();
         setHideBadge(false);
       }
     };
-    // Delay attaching so the opening click doesn't immediately close
-    const timer = setTimeout(() => document.addEventListener('mousedown', handleClickOutside), 0);
+    
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      clearTimeout(timer);
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [open, mutate]);
