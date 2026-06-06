@@ -22,6 +22,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "File exceeds 10MB limit" }, { status: 400 });
     }
 
+    // Validate type (MIME type and extension)
+    const allowedMimeTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png'
+    ];
+    
+    const allowedExtensions = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'];
+    const fileNameLower = file.name.toLowerCase();
+    
+    if (!allowedMimeTypes.includes(file.type)) {
+      return NextResponse.json({ error: "Invalid file type. Only PDF, DOC, DOCX, JPG, JPEG, and PNG are allowed." }, { status: 400 });
+    }
+
+    if (!allowedExtensions.some(ext => fileNameLower.endsWith(ext))) {
+      return NextResponse.json({ error: "Invalid file extension." }, { status: 400 });
+    }
+
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);

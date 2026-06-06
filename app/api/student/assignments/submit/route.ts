@@ -25,6 +25,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Student profile not found" }, { status: 403 });
     }
 
+    // Verify assignment belongs to the student's class
+    const assignment = await prisma.assignment.findUnique({
+      where: { id: assignmentId }
+    });
+
+    if (!assignment || assignment.classId !== student.classId) {
+      return NextResponse.json({ error: "Invalid assignment or unauthorized access" }, { status: 403 });
+    }
+
     // Use upsert with the unique constraint on (assignmentId, studentId)
     const submission = await prisma.submission.upsert({
       where: { assignmentId_studentId: { assignmentId, studentId: student.id } },

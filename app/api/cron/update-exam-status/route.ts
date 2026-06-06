@@ -7,12 +7,11 @@ import { prisma } from "@/lib/prisma";
 // GET /api/cron/update-exam-status
 export async function GET(req: NextRequest) {
   try {
-    // Basic auth check if CRON_SECRET is set
+    // Basic auth check using CRON_SECRET
     const authHeader = req.headers.get("authorization");
-    if (
-      process.env.CRON_SECRET &&
-      authHeader !== `Bearer ${process.env.CRON_SECRET}`
-    ) {
+    const secret = process.env.CRON_SECRET;
+    
+    if (!secret || authHeader !== `Bearer ${secret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
