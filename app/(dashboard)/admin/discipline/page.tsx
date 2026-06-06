@@ -239,7 +239,7 @@ export default function AdminDisciplinePage() {
 
       {/* Review Modal */}
       {selectedReport && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-6 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-3 sm:p-6 backdrop-blur-sm">
           <div className="bg-surface rounded-2xl shadow-modal w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             
             <div className={`p-6 border-b flex items-center justify-between ${
@@ -286,7 +286,7 @@ export default function AdminDisciplinePage() {
               <div>
                 <h4 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-3">Incident Details</h4>
                 <div className="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
-                  <div className="grid grid-cols-2 divide-x divide-y divide-border">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-x sm:divide-y-0 divide-border">
                     <div className="p-3">
                       <p className="text-xs text-text-muted mb-1">Category</p>
                       <p className="text-sm font-medium text-text-primary">{selectedReport.category}</p>

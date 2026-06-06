@@ -86,12 +86,12 @@ export default function MetricCard({
       </div>
       
       <div className="flex items-end justify-between">
-        <div className="text-2xl font-display font-bold text-text-primary">
+        <div className="text-xl sm:text-2xl font-display font-bold text-text-primary">
           {isNumeric && !isInView ? "0" : formattedValue}
         </div>
         
         {trend && (
-          <div className="flex items-center gap-1.5 text-sm">
+          <div className="flex items-center gap-1 flex-wrap text-sm">
             <div className={`flex items-center font-medium ${trend.direction === "up" ? "text-status-success-text" : "text-status-danger-text"}`}>
               {trend.direction === "up" ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
               {trend.direction === "up" ? "+" : "-"}{trend.value}%

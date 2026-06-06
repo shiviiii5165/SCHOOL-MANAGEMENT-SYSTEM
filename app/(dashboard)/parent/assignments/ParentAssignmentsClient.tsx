@@ -89,8 +89,8 @@ export default function ParentAssignmentsClient({ initialData }: ParentAssignmen
       {/* Header & Child Selection */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary flex items-center gap-3">
-            <BookOpen className="w-8 h-8 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-text-primary flex items-center gap-3">
+            <BookOpen className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
             Assignments Overview
           </h1>
           <p className="text-sm text-text-secondary mt-2">Track homework, projects, and grades for your children.</p>

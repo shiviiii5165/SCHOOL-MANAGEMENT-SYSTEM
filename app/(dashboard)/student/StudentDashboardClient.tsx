@@ -30,11 +30,11 @@ export default function StudentDashboardClient({ student }: { student: any }) {
       )}
 
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-role-student to-cyan-700 rounded-2xl p-8 text-white shadow-dropdown relative overflow-hidden">
+      <div className="bg-gradient-to-r from-role-student to-cyan-700 rounded-xl sm:rounded-2xl p-5 sm:p-8 text-white shadow-dropdown relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-display font-bold mb-2">Welcome back, {student?.user?.name || "Student"}!</h1>
+            <h1 className="text-2xl sm:text-3xl font-display font-bold mb-2">Welcome back, {student?.user?.name || "Student"}!</h1>
             <p className="text-white/80 max-w-lg">You have 2 pending assignments due this week. Keep up the good work!</p>
           </div>
           <div className="shrink-0 bg-white/20 backdrop-blur-md rounded-xl p-4 text-center min-w-[120px]">
@@ -86,14 +86,14 @@ export default function StudentDashboardClient({ student }: { student: any }) {
               { time: "10:30 AM", subject: "Chemistry", teacher: "Vikram Malhotra", room: "Lab 1", status: "now" },
               { time: "11:30 AM", subject: "Physics", teacher: "Ravi Sharma", room: "Lab 2", status: "upcoming" },
             ].map((cls, i) => (
-              <div key={i} className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
+              <div key={i} className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-colors ${
                 cls.status === "now" ? "border-primary bg-primary-light/30 shadow-sm" : "border-border hover:border-primary/50"
               }`}>
                 <div className={`w-2 h-12 rounded-full ${
                   cls.status === "completed" ? "bg-status-success" : 
                   cls.status === "now" ? "bg-primary animate-pulse" : "bg-border-strong"
                 }`} />
-                <div className="w-20 shrink-0">
+                <div className="w-16 sm:w-20 shrink-0">
                   <span className={`text-sm font-bold ${cls.status === "now" ? "text-primary" : "text-text-primary"}`}>{cls.time}</span>
                 </div>
                 <div className="flex-1">

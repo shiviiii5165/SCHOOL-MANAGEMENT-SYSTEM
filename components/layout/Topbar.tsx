@@ -35,7 +35,7 @@ export default function Topbar({
             <Menu className="w-6 h-6" />
           </button>
         )}
-        <h1 className="text-xl font-display font-bold text-text-primary truncate max-w-[150px] sm:max-w-xs">
+        <h1 className="text-lg sm:text-xl font-display font-bold text-text-primary truncate max-w-[200px] sm:max-w-xs">
           {title}
         </h1>
       </div>

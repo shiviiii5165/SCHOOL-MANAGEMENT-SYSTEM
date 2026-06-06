@@ -155,7 +155,7 @@ export default function NotificationBell({ role }: { role: string }) {
           </div>
 
           {/* List */}
-          <div className="flex-1 sm:max-h-[420px] overflow-y-auto divide-y divide-border/50 pb-20 sm:pb-0">
+          <div className="flex-1 sm:max-h-[420px] overflow-y-auto divide-y divide-border/50 pb-4 sm:pb-0">
             {notifications.length === 0 ? (
               <div className="py-12 text-center">
                 <Bell size={32} className="text-border mx-auto mb-2"/>

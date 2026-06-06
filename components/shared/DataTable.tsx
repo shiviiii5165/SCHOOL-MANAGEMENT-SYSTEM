@@ -122,7 +122,7 @@ export default function DataTable<T extends { id: string }>({
               setSearchTerm(e.target.value);
               if (onSearchChange) onSearchChange(e.target.value);
             }}
-            className="w-full pl-9 pr-4 py-2 border border-border rounded-md text-sm sm:text-base focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+            className="w-full pl-9 pr-4 py-2 border border-border rounded-md text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
           />
         </div>
         
@@ -138,12 +138,61 @@ export default function DataTable<T extends { id: string }>({
         )}
       </div>
 
-      {/* Table Content */}
-      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+      {/* Mobile Card View */}
+      <div className="sm:hidden divide-y divide-border">
+        {paginatedData.length === 0 ? (
+          <div className="p-8 text-center text-text-secondary text-sm">
+            No results found for "{searchTerm}"
+          </div>
+        ) : paginatedData.map((item) => (
+          <div key={item.id} className="p-4 hover:bg-background/60 transition-colors">
+            <div className="space-y-2">
+              {columns.slice(0, 4).map((col, i) => (
+                <div key={i} className={i === 0 ? '' : 'flex items-center justify-between'}>
+                  {i === 0 ? (
+                    <div className="font-medium text-text-primary">
+                      {col.cell ? col.cell(item) : (item as any)[col.accessorKey]}
+                    </div>
+                  ) : (
+                    <>
+                      <span className="text-xs text-text-muted uppercase tracking-wider">{col.header}</span>
+                      <span className="text-sm text-text-primary">
+                        {col.cell ? col.cell(item) : (item as any)[col.accessorKey]}
+                      </span>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+            {(onEdit || onView || onDelete) && (
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
+                {onView && (
+                  <button onClick={() => onView(item)} className="flex-1 flex items-center justify-center gap-1.5 p-2 text-xs font-medium text-text-muted hover:text-primary hover:bg-primary-light rounded-lg transition-colors">
+                    <Eye className="w-3.5 h-3.5" /> View
+                  </button>
+                )}
+                {onEdit && (
+                  <button onClick={() => onEdit(item)} className="flex-1 flex items-center justify-center gap-1.5 p-2 text-xs font-medium text-text-muted hover:text-role-teacher hover:bg-role-teacher/10 rounded-lg transition-colors">
+                    <Edit className="w-3.5 h-3.5" /> Edit
+                  </button>
+                )}
+                {onDelete && (
+                  <button onClick={() => onDelete(item)} className="flex-1 flex items-center justify-center gap-1.5 p-2 text-xs font-medium text-text-muted hover:text-status-danger-text hover:bg-status-danger-bg rounded-lg transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="overflow-x-auto hidden sm:block">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-background text-text-muted text-xs uppercase border-b border-border">
             <tr>
-              <th className="px-4 py-3 w-10 sticky left-0 bg-background z-10">
+              <th className="px-4 py-3 w-10">
                 <button onClick={toggleSelectAll} className="text-text-muted hover:text-text-primary transition-colors min-h-[44px] flex items-center justify-center">
                   {selectedIds.size === paginatedData.length && paginatedData.length > 0 ? (
                     <CheckSquare className="w-4 h-4 text-primary" />
@@ -167,7 +216,7 @@ export default function DataTable<T extends { id: string }>({
                 </th>
               ))}
               {(onEdit || onView || onDelete) && (
-                <th className="px-4 py-3 font-medium text-right sticky right-0 bg-background z-10 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] sm:shadow-none">Actions</th>
+                <th className="px-4 py-3 font-medium text-right">Actions</th>
               )}
             </tr>
           </thead>
@@ -177,7 +226,7 @@ export default function DataTable<T extends { id: string }>({
                 key={item.id} 
                 className="border-b border-border last:border-0 hover:bg-background/60 transition-colors group"
               >
-                <td className="px-4 py-3 sticky left-0 bg-surface group-hover:bg-background/60 z-10 transition-colors">
+                <td className="px-4 py-3">
                   <button onClick={() => toggleSelect(item.id)} className="text-text-muted hover:text-text-primary transition-colors min-h-[44px] flex items-center justify-center">
                     {selectedIds.has(item.id) ? (
                       <CheckSquare className="w-4 h-4 text-primary" />
@@ -193,8 +242,8 @@ export default function DataTable<T extends { id: string }>({
                 ))}
                 
                 {(onEdit || onView || onDelete) && (
-                  <td className="px-4 py-3 text-right sticky right-0 bg-surface group-hover:bg-background/60 z-10 transition-colors shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] sm:shadow-none">
-                    <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       {onView && (
                         <button onClick={() => onView(item)} className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-primary hover:bg-primary-light rounded transition-colors" title="View">
                           <Eye className="w-4 h-4" />

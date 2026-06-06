@@ -48,23 +48,23 @@ export default function AdminFeesClient({ data, stats, defaulters }: AdminFeesCl
       accessorKey: "studentName",
       cell: (item: any) => (
         <div>
-          <span className="font-medium text-slate-800 block">{item.studentName}</span>
-          <span className="text-xs text-slate-500">{item.className} | Roll: {item.rollNo}</span>
+          <span className="font-medium text-text-primary block">{item.studentName}</span>
+          <span className="text-xs text-text-secondary">{item.className} | Roll: {item.rollNo}</span>
         </div>
       )
     },
     {
       header: "Fee Type",
       accessorKey: "feeType",
-      cell: (item: any) => <span className="text-sm font-medium text-slate-700">{item.feeType}</span>
+      cell: (item: any) => <span className="text-sm font-medium text-text-primary">{item.feeType}</span>
     },
     {
       header: "Total Due",
       accessorKey: "amount",
       cell: (item: any) => (
         <div>
-          <span className="font-bold text-slate-800">₹{(item.amount + item.lateFine).toLocaleString('en-IN')}</span>
-          {item.lateFine > 0 && <span className="text-[10px] block text-red-500 font-bold">+₹{item.lateFine} Fine</span>}
+          <span className="font-bold text-text-primary">₹{(item.amount + item.lateFine).toLocaleString('en-IN')}</span>
+          {item.lateFine > 0 && <span className="text-[10px] block text-status-danger-text font-bold">+₹{item.lateFine} Fine</span>}
         </div>
       )
     },
@@ -73,30 +73,30 @@ export default function AdminFeesClient({ data, stats, defaulters }: AdminFeesCl
       accessorKey: "paidAmount",
       cell: (item: any) => (
         <div className="flex flex-col">
-          <span className="text-sm text-emerald-600 font-semibold">P: ₹{item.paidAmount.toLocaleString('en-IN')}</span>
-          <span className="text-sm text-red-500 font-semibold">O: ₹{item.outstanding.toLocaleString('en-IN')}</span>
+          <span className="text-sm text-status-success-text font-semibold">P: ₹{item.paidAmount.toLocaleString('en-IN')}</span>
+          <span className="text-sm text-status-danger-text font-semibold">O: ₹{item.outstanding.toLocaleString('en-IN')}</span>
         </div>
       )
     },
     {
       header: "Due Date",
       accessorKey: "dueDate",
-      cell: (item: any) => <span className="text-sm text-slate-600">{new Date(item.dueDate).toLocaleDateString('en-GB')}</span>
+      cell: (item: any) => <span className="text-sm text-text-secondary">{new Date(item.dueDate).toLocaleDateString('en-GB')}</span>
     },
     {
       header: "Status",
       accessorKey: "status",
       cell: (item: any) => {
         const styles: any = {
-          PAID: "bg-emerald-100 text-emerald-700",
-          PARTIAL: "bg-indigo-100 text-indigo-700",
-          PENDING: "bg-slate-100 text-slate-700",
-          'DUE SOON': "bg-amber-100 text-amber-700",
-          OVERDUE: "bg-red-100 text-red-700",
-          UNPAID: "bg-slate-100 text-slate-700"
+          PAID: "bg-status-success-bg text-status-success-text",
+          PARTIAL: "bg-primary-light text-primary",
+          PENDING: "bg-background text-text-secondary",
+          'DUE SOON': "bg-status-warning-bg text-status-warning-text",
+          OVERDUE: "bg-status-danger-bg text-status-danger-text",
+          UNPAID: "bg-background text-text-secondary"
         };
         return (
-          <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${styles[item.status] || 'bg-slate-100'}`}>
+          <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${styles[item.status] || 'bg-background'}`}>
             {item.status}
           </span>
         );
@@ -109,7 +109,7 @@ export default function AdminFeesClient({ data, stats, defaulters }: AdminFeesCl
         item.status !== 'PAID' ? (
           <button 
             onClick={() => handleCreateInstallment(item.id)}
-            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 underline"
+            className="text-xs font-bold text-primary hover:text-primary-dark underline"
           >
             Split Installments
           </button>
@@ -122,16 +122,16 @@ export default function AdminFeesClient({ data, stats, defaulters }: AdminFeesCl
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Fee Management</h1>
-          <p className="text-sm text-slate-500 mt-1">Track collections, dues, and parent payments</p>
+          <h1 className="text-2xl font-bold text-text-primary">Fee Management</h1>
+          <p className="text-sm text-text-secondary mt-1">Track collections, dues, and parent payments</p>
         </div>
         
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium text-sm transition-colors">
+          <button className="flex items-center gap-2 border border-border bg-surface hover:bg-surface-hover text-text-primary px-4 py-2 rounded-lg font-medium text-sm transition-colors">
             <Download className="w-4 h-4" />
             Export CSV
           </button>
-          <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">
+          <button className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">
             <Plus className="w-4 h-4" />
             Generate Invoice
           </button>
@@ -139,58 +139,58 @@ export default function AdminFeesClient({ data, stats, defaulters }: AdminFeesCl
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-surface p-5 rounded-2xl border border-border shadow-card">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Total Collection</p>
-              <p className="text-2xl font-black text-slate-800 mt-1">₹{stats.totalCollection.toLocaleString('en-IN')}</p>
+              <p className="text-xs text-text-muted font-bold uppercase tracking-wider">Total Collection</p>
+              <p className="text-2xl font-black text-text-primary mt-1">₹{stats.totalCollection.toLocaleString('en-IN')}</p>
             </div>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg"><IndianRupee className="w-5 h-5" /></div>
+            <div className="p-2 bg-status-success-bg text-status-success-text rounded-lg"><IndianRupee className="w-5 h-5" /></div>
           </div>
-          <p className="text-xs font-medium text-emerald-600 mt-3">+₹{stats.thisMonthCollection.toLocaleString('en-IN')} this month</p>
+          <p className="text-xs font-medium text-status-success-text mt-3">+₹{stats.thisMonthCollection.toLocaleString('en-IN')} this month</p>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-surface p-5 rounded-2xl border border-border shadow-card">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">School-wide Outstanding</p>
-              <p className="text-2xl font-black text-amber-600 mt-1">₹{stats.outstandingAmount.toLocaleString('en-IN')}</p>
+              <p className="text-xs text-text-muted font-bold uppercase tracking-wider">School-wide Outstanding</p>
+              <p className="text-2xl font-black text-status-warning-text mt-1">₹{stats.outstandingAmount.toLocaleString('en-IN')}</p>
             </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Transport Revenue</p>
-              <p className="text-2xl font-black text-indigo-600 mt-1">₹{stats.transportCollection.toLocaleString('en-IN')}</p>
-            </div>
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><Truck className="w-5 h-5" /></div>
           </div>
         </div>
 
-        <div className="bg-red-50 p-5 rounded-2xl border border-red-100 shadow-sm">
+        <div className="bg-surface p-5 rounded-2xl border border-border shadow-card">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-xs text-red-600 font-bold uppercase tracking-wider">Defaulters (&gt;30 Days)</p>
-              <p className="text-2xl font-black text-red-700 mt-1">{stats.defaulterCount} Students</p>
+              <p className="text-xs text-text-muted font-bold uppercase tracking-wider">Transport Revenue</p>
+              <p className="text-2xl font-black text-primary mt-1">₹{stats.transportCollection.toLocaleString('en-IN')}</p>
             </div>
-            <div className="p-2 bg-red-100 text-red-700 rounded-lg"><AlertTriangle className="w-5 h-5" /></div>
+            <div className="p-2 bg-primary-light text-primary rounded-lg"><Truck className="w-5 h-5" /></div>
+          </div>
+        </div>
+
+        <div className="bg-status-danger-bg p-5 rounded-2xl border border-status-danger/10 shadow-card">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-xs text-status-danger-text font-bold uppercase tracking-wider">Defaulters (&gt;30 Days)</p>
+              <p className="text-2xl font-black text-status-danger mt-1">{stats.defaulterCount} Students</p>
+            </div>
+            <div className="p-2 bg-status-danger/10 text-status-danger rounded-lg"><AlertTriangle className="w-5 h-5" /></div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden p-6 space-y-6">
-        <div className="flex items-center gap-4 border-b border-slate-100 pb-4">
+      <div className="bg-surface border border-border rounded-2xl shadow-card overflow-hidden p-4 sm:p-6 space-y-6">
+        <div className="flex items-center gap-4 border-b border-border pb-4">
           <button 
             onClick={() => setActiveTab('ALL')}
-            className={`font-semibold text-sm pb-4 -mb-4 border-b-2 transition-colors ${activeTab === 'ALL' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            className={`font-semibold text-sm pb-4 -mb-4 border-b-2 transition-colors ${activeTab === 'ALL' ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
           >
             All Invoices
           </button>
           <button 
             onClick={() => setActiveTab('DEFAULTERS')}
-            className={`font-semibold text-sm pb-4 -mb-4 border-b-2 transition-colors ${activeTab === 'DEFAULTERS' ? 'border-red-600 text-red-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+            className={`font-semibold text-sm pb-4 -mb-4 border-b-2 transition-colors ${activeTab === 'DEFAULTERS' ? 'border-status-danger text-status-danger' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
           >
             Defaulters List
           </button>

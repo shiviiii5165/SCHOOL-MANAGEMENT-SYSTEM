@@ -35,28 +35,29 @@ export default function AttendanceRiskList({ students, onDetainClick, onLiftClic
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-background border-b border-border">
-              <th className="text-left font-semibold text-text-muted uppercase tracking-wider px-6 py-3">Roll</th>
-              <th className="text-left font-semibold text-text-muted uppercase tracking-wider px-6 py-3">Student Name</th>
-              <th className="text-left font-semibold text-text-muted uppercase tracking-wider px-6 py-3">Class</th>
-              <th className="text-left font-semibold text-text-muted uppercase tracking-wider px-6 py-3">Attendance</th>
-              <th className="text-left font-semibold text-text-muted uppercase tracking-wider px-6 py-3">Risk Level</th>
-              <th className="text-right font-semibold text-text-muted uppercase tracking-wider px-6 py-3">Action</th>
+              <th className="text-left font-semibold text-text-muted uppercase tracking-wider px-3 sm:px-6 py-3 hidden sm:table-cell">Roll</th>
+              <th className="text-left font-semibold text-text-muted uppercase tracking-wider px-3 sm:px-6 py-3">Student Name</th>
+              <th className="text-left font-semibold text-text-muted uppercase tracking-wider px-3 sm:px-6 py-3 hidden sm:table-cell">Class</th>
+              <th className="text-left font-semibold text-text-muted uppercase tracking-wider px-3 sm:px-6 py-3">Attendance</th>
+              <th className="text-left font-semibold text-text-muted uppercase tracking-wider px-3 sm:px-6 py-3 hidden md:table-cell">Risk Level</th>
+              <th className="text-right font-semibold text-text-muted uppercase tracking-wider px-3 sm:px-6 py-3">Action</th>
             </tr>
           </thead>
           <tbody>
             {students.map((student) => (
               <tr key={student.id} className="border-b border-border last:border-0 hover:bg-background/50 transition-colors">
-                <td className="px-6 py-3 font-mono text-text-secondary">{student.rollNo}</td>
-                <td className="px-6 py-3 font-medium text-text-primary">
+                <td className="px-3 sm:px-6 py-3 font-mono text-text-secondary hidden sm:table-cell">{student.rollNo}</td>
+                <td className="px-3 sm:px-6 py-3 font-medium text-text-primary">
                   {student.name}
+                  <span className="sm:hidden text-xs text-text-muted block">{student.className}</span>
                   {student.examEligible === false && <span className="ml-2 text-[10px] bg-[#FEF2F2] text-[#DC2626] px-1.5 py-0.5 rounded border border-[#FECACA]">DETAINED</span>}
                 </td>
-                <td className="px-6 py-3 text-text-secondary">{student.className}</td>
-                <td className="px-6 py-3 font-mono font-medium text-[#D97706]">
+                <td className="px-3 sm:px-6 py-3 text-text-secondary hidden sm:table-cell">{student.className}</td>
+                <td className="px-3 sm:px-6 py-3 font-mono font-medium text-[#D97706]">
                   {student.attendance}% ⚠
                 </td>
-                <td className="px-6 py-3">{getRiskBadge(student.attendance)}</td>
-                <td className="px-6 py-3 text-right">
+                <td className="px-3 sm:px-6 py-3 hidden md:table-cell">{getRiskBadge(student.attendance)}</td>
+                <td className="px-3 sm:px-6 py-3 text-right">
                   {student.examEligible ? (
                     <button
                       onClick={() => onDetainClick(student)}

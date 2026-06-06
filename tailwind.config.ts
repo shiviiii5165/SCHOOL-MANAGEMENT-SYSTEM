@@ -89,8 +89,25 @@ const config: Config = {
         "card-pad": "20px",
       },
       maxWidth: {
-        content: "1280px",
-      }
+        content: "1400px",
+      },
+      screens: {
+        xs: "475px",
+      },
+      keyframes: {
+        "slide-in": {
+          from: { opacity: "0", transform: "translateY(-8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+      },
+      animation: {
+        "slide-in": "slide-in 0.3s ease-out",
+        "fade-in": "fade-in 0.2s ease-out",
+      },
     },
   },
   plugins: [],

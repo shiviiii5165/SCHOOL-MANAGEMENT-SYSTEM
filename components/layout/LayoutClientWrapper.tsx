@@ -25,7 +25,7 @@ export default function LayoutClientWrapper({
     ? (hasBottomNav ? 'h-[calc(100dvh-128px)] md:h-[calc(100dvh-64px)]' : 'h-[calc(100dvh-64px)]')
     : '';
 
-  const sidebarMargin = sidebarCollapsed ? 'md:ml-[72px]' : 'md:ml-[240px]';
+  const sidebarWidth = sidebarCollapsed ? 72 : 240;
 
   return (
     <div className={`bg-background flex w-full relative overflow-x-hidden ${isMessagesPage ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh]'}`}>
@@ -38,14 +38,24 @@ export default function LayoutClientWrapper({
         onToggleCollapse={() => setSidebarCollapsed(prev => !prev)}
       />
 
-      <div className={`flex-1 flex flex-col transition-all duration-300 w-full ml-0 ${sidebarMargin} ${hasBottomNav ? 'pb-16 md:pb-0' : ''} ${isMessagesPage ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh]'}`}>
-        <Topbar 
-          user={user} 
-          onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)} 
-        />
-        <main className={`flex-1 w-full mx-auto max-w-content overflow-x-hidden flex flex-col ${isMessagesPage ? `p-0 ${mainHeightClass}` : 'p-4 sm:p-6'}`}>
-          {children}
-        </main>
+      <div
+        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out w-full ${isMessagesPage ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh]'}`}
+        style={{
+          marginLeft: 0,
+          paddingBottom: hasBottomNav ? 'calc(4rem + env(safe-area-inset-bottom, 0px))' : undefined,
+        }}
+      >
+        {/* Push content right on md+ screens based on sidebar width */}
+        <style>{`@media (min-width: 768px) { .layout-main-shift { margin-left: ${sidebarWidth}px !important; } }`}</style>
+        <div className="layout-main-shift flex-1 flex flex-col transition-all duration-300 ease-in-out">
+          <Topbar 
+            user={user} 
+            onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)} 
+          />
+          <main className={`flex-1 w-full mx-auto max-w-content overflow-x-hidden flex flex-col ${isMessagesPage ? `p-0 ${mainHeightClass}` : 'p-3 xs:p-4 sm:p-6'}`}>
+            {children}
+          </main>
+        </div>
       </div>
 
       {/* Bottom Navigation for Non-Admins on Mobile */}
@@ -53,3 +63,4 @@ export default function LayoutClientWrapper({
     </div>
   );
 }
+

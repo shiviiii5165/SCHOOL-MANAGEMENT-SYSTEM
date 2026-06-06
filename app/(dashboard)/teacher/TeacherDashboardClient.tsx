@@ -34,10 +34,10 @@ export default function TeacherDashboardClient({
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-role-teacher to-purple-800 rounded-2xl p-8 text-white shadow-dropdown relative overflow-hidden">
+      <div className="bg-gradient-to-r from-role-teacher to-purple-800 rounded-xl sm:rounded-2xl p-5 sm:p-8 text-white shadow-dropdown relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="relative z-10">
-          <h1 className="text-3xl font-display font-bold mb-2">Welcome back, Rajesh Singh!</h1>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold mb-2">Welcome back, Rajesh Singh!</h1>
           <p className="text-white/80 max-w-lg">You have {stats.classesToday} classes today. Have a great day ahead!</p>
         </div>
       </div>
@@ -87,7 +87,7 @@ export default function TeacherDashboardClient({
                 const status = getStatus(cls.startTime, cls.endTime);
                 const isMarked = markedClassIds.includes(cls.classId);
                 return (
-                  <div key={i} className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${status === "ongoing" ? "border-primary bg-primary-light/10 shadow-sm animate-pulse" : "border-border hover:border-primary/50"}`}>
+                  <div key={i} className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-colors ${status === "ongoing" ? "border-primary bg-primary-light/10 shadow-sm animate-pulse" : "border-border hover:border-primary/50"}`}>
                     <div className={`w-2 h-12 rounded-full ${status === "completed" ? "bg-status-success" : status === "ongoing" ? "bg-primary" : "bg-border"}`} />
                     <div className="flex-1">
                       <h4 className="font-medium text-text-primary flex items-center gap-2">

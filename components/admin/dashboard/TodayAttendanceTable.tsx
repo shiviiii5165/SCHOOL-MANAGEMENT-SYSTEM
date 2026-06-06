@@ -46,33 +46,33 @@ export default function TodayAttendanceTable() {
         <table className="w-full text-sm text-left">
           <thead className="text-xs text-text-muted uppercase bg-background sticky top-0 z-10">
             <tr>
-              <th className="px-6 py-3 font-medium">Class</th>
-              <th className="px-6 py-3 font-medium">Teacher</th>
-              <th className="px-6 py-3 font-medium">Time</th>
-              <th className="px-6 py-3 font-medium text-center">Present</th>
-              <th className="px-6 py-3 font-medium text-center">Absent</th>
-              <th className="px-6 py-3 font-medium text-right">Status</th>
+              <th className="px-3 sm:px-6 py-3 font-medium">Class</th>
+              <th className="px-3 sm:px-6 py-3 font-medium">Teacher</th>
+              <th className="px-3 sm:px-6 py-3 font-medium hidden sm:table-cell">Time</th>
+              <th className="px-3 sm:px-6 py-3 font-medium text-center">Present</th>
+              <th className="px-3 sm:px-6 py-3 font-medium text-center">Absent</th>
+              <th className="px-3 sm:px-6 py-3 font-medium text-right">Status</th>
             </tr>
           </thead>
           <tbody>
             {data.map((row: any, i: number) => (
               <tr key={i} className={`border-b border-border last:border-0 ${row.status === 'SUBMITTED' ? 'bg-white' : 'bg-status-warning-bg/30'}`}>
-                <td className="px-6 py-4 font-medium text-text-primary">{row.className}</td>
-                <td className="px-6 py-4">
+                <td className="px-3 sm:px-6 py-3 sm:py-4 font-medium text-text-primary">{row.className}</td>
+                <td className="px-3 sm:px-6 py-3 sm:py-4">
                   <Link href={`/admin/teachers/${row.teacherId}`} className="text-primary hover:underline">
                     {row.teacherName}
                   </Link>
                 </td>
-                <td className="px-6 py-4 text-text-secondary">
+                <td className="px-3 sm:px-6 py-3 sm:py-4 text-text-secondary hidden sm:table-cell">
                   {row.status === 'SUBMITTED' ? new Date(row.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
                 </td>
-                <td className="px-6 py-4 text-center font-medium text-status-success-text">
+                <td className="px-3 sm:px-6 py-3 sm:py-4 text-center font-medium text-status-success-text">
                   {row.status === 'SUBMITTED' ? row.present : '—'}
                 </td>
-                <td className="px-6 py-4 text-center font-medium text-status-danger-text">
+                <td className="px-3 sm:px-6 py-3 sm:py-4 text-center font-medium text-status-danger-text">
                   {row.status === 'SUBMITTED' ? row.absent : '—'}
                 </td>
-                <td className="px-6 py-4 text-right">
+                <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
                   {row.status === 'SUBMITTED' ? (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-status-success-bg text-status-success-text border border-status-success-text/20">
                       <CheckCircle2 className="w-3.5 h-3.5" />

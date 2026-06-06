@@ -134,7 +134,13 @@ export default function Sidebar({
                       className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r"
                     />
                   )}
-                  <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-primary" : "text-text-muted group-hover:text-text-secondary"}`} />
+                  <div className="relative flex-shrink-0">
+                    <item.icon className={`w-5 h-5 ${isActive ? "text-primary" : "text-text-muted group-hover:text-text-secondary"}`} />
+                    {/* Collapsed badge dot */}
+                    {collapsed && badgeCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-status-danger rounded-full border-2 border-surface" />
+                    )}
+                  </div>
                   {!collapsed && (
                     <span className="truncate">{item.label}</span>
                   )}

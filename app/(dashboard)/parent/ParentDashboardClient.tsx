@@ -29,11 +29,11 @@ export default function ParentDashboardClient({ childrenData, parentName, newNot
   return (
     <div className="space-y-6">
       {/* Welcome & Child Selector */}
-      <div className="bg-gradient-to-r from-role-parent to-emerald-700 rounded-2xl p-8 text-white shadow-dropdown relative overflow-hidden">
+      <div className="bg-gradient-to-r from-role-parent to-emerald-700 rounded-xl sm:rounded-2xl p-5 sm:p-8 text-white shadow-dropdown relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-display font-bold mb-2">Welcome, {parentName}!</h1>
+            <h1 className="text-2xl sm:text-3xl font-display font-bold mb-2">Welcome, {parentName}!</h1>
             <p className="text-white/80 max-w-lg">Track your children&apos;s academic progress, attendance, and fee payments.</p>
           </div>
           
