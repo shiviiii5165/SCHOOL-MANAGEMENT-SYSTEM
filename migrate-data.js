@@ -1,8 +1,9 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+require('dotenv').config();
 const { Client } = require('pg');
 
-const supabaseUrl = "postgresql://postgres.rnbhlpavfrdsgumxesra:aMazon%402029999999@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres?sslmode=require";
-const neonUrl = "postgresql://neondb_owner:npg_ZRHxus35lBif@ep-billowing-art-aocdalw2.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require";
+const supabaseUrl = process.env.DATABASE_URL_SRC;
+const neonUrl = process.env.DATABASE_URL;
 
 async function migrate() {
   const source = new Client({ connectionString: supabaseUrl, ssl: { rejectUnauthorized: false } });
