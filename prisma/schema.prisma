@@ -42,6 +42,7 @@ model User {
 
 model Student {
   id                   String             @id @default(cuid())
+  studentCode          String?            @unique
   userId               String             @unique
   rollNo               String
   classId              String
@@ -90,8 +91,9 @@ model Student {
 }
 
 model Parent {
-  id       String    @id @default(cuid())
-  userId   String    @unique
+  id         String    @id @default(cuid())
+  parentCode String?   @unique
+  userId     String    @unique
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   students Student[]
 }
@@ -233,6 +235,7 @@ model Result {
 
 model FeeRecord {
   id                 String            @id @default(cuid())
+  invoiceId          String?           @unique
   studentId          String
   amount             Float
   feeType            String

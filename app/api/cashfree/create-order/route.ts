@@ -112,8 +112,9 @@ export async function POST(req: NextRequest) {
     const orderId = `EDUCORE_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
-    // Sanitize customer_id — Cashfree requires alphanumeric + _ - .
-    const customerId = (parentId || session.user.id).replace(/[^a-zA-Z0-9_\-\.]/g, "_").slice(0, 50);
+    // Sanitize customer_id — Cashfree requires alphanumeric + _ - . Using phone number for readability in dashboard.
+    const phone = (parentUser?.phone || "9999999999").replace(/[^0-9]/g, "").slice(-10);
+    const customerId = `CUST_${phone}`;
 
     // Build return URL using URL constructor for proper encoding
     const returnPath = role === "STUDENT" ? "/student/fees" : "/parent/fees";
