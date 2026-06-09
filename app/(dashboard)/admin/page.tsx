@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Suspense } from "react";
 import DashboardMetrics from "@/components/admin/dashboard/DashboardMetrics";
 import RecentActivityFeed from "@/components/admin/dashboard/RecentActivityFeed";

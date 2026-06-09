@@ -221,6 +221,29 @@ async function processSuccessfulPayment(
         },
       });
     }
+
+    // ----------------------------------------------------
+    // Inform all Admins about the successful payment
+    // ----------------------------------------------------
+    const admins = await tx.user.findMany({ where: { role: "ADMIN" } });
+    const studentInfo = await tx.student.findUnique({
+      where: { id: pendingOrder.studentId },
+      include: { user: true },
+    });
+
+    if (admins.length > 0 && studentInfo) {
+      const notifications = admins.map((admin) => ({
+        userId: admin.id,
+        title: "New Fee Payment Received",
+        message: `₹${paidAmount} received from ${studentInfo.user.name} for ${invoice.feeType} fee via ${paymentMethod}.`,
+        type: "FEE" as any, // Using 'as any' to avoid TS errors if enum types are strictly imported
+        link: "/admin/fees",
+      }));
+
+      await tx.notification.createMany({
+        data: notifications,
+      });
+    }
   });
 }
 
