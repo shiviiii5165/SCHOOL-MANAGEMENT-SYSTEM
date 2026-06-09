@@ -3,18 +3,19 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { Cashfree: CashfreeSDK, CFEnvironment } = require("cashfree-pg");
 import crypto from "crypto";
 
-// Initialize Cashfree SDK instance
-const cashfree = new CashfreeSDK(
-  process.env.CASHFREE_APP_ID,
-  process.env.CASHFREE_SECRET_KEY,
-  process.env.CASHFREE_ENV === "production"
-    ? CFEnvironment.PRODUCTION
-    : CFEnvironment.SANDBOX
-);
+/**
+ * Cashfree Create Order — uses raw fetch instead of SDK to avoid
+ * constructor/type issues with the cashfree-pg package.
+ */
+
+const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID || "";
+const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY || "";
+const IS_PRODUCTION = process.env.CASHFREE_ENV === "production";
+const CASHFREE_BASE_URL = IS_PRODUCTION
+  ? "https://api.cashfree.com/pg"
+  : "https://sandbox.cashfree.com/pg";
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,6 +36,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "invoiceId and amount (≥ ₹1) are required" },
         { status: 400 }
+      );
+    }
+
+    // Validate credentials are present
+    if (!CASHFREE_APP_ID || !CASHFREE_SECRET_KEY) {
+      console.error("Missing Cashfree credentials:", {
+        hasAppId: !!CASHFREE_APP_ID,
+        hasSecretKey: !!CASHFREE_SECRET_KEY,
+      });
+      return NextResponse.json(
+        { error: "Payment gateway not configured. Contact admin." },
+        { status: 500 }
       );
     }
 
@@ -99,16 +112,19 @@ export async function POST(req: NextRequest) {
     const orderId = `EDUCORE_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
-    // Create Cashfree Order
-    const orderRequest = {
+    // Sanitize customer_id — Cashfree requires alphanumeric + _ - .
+    const customerId = (parentId || session.user.id).replace(/[^a-zA-Z0-9_\-\.]/g, "_").slice(0, 50);
+
+    // Build order payload
+    const orderPayload = {
       order_id: orderId,
       order_amount: amount,
       order_currency: "INR",
       customer_details: {
-        customer_id: parentId || session.user.id,
-        customer_name: parentUser?.name || session.user.name || "Parent",
+        customer_id: customerId,
+        customer_name: (parentUser?.name || session.user.name || "Parent").slice(0, 100),
         customer_email: parentUser?.email || session.user.email || "parent@school.com",
-        customer_phone: parentUser?.phone || "9999999999",
+        customer_phone: (parentUser?.phone || "9999999999").replace(/[^0-9]/g, "").slice(-10),
       },
       order_meta: {
         return_url: `${frontendUrl}/parent/fees?order_id=${orderId}&payment_status={payment_status}&fee_id=${invoiceId}`,
@@ -116,13 +132,46 @@ export async function POST(req: NextRequest) {
       order_note: `Fee payment for ${invoice.feeType} - ${invoice.student.user.name}`,
     };
 
-    const response = await cashfree.PGCreateOrder("2023-08-01", orderRequest);
-    const orderData = response.data;
+    console.log("Creating Cashfree order:", {
+      url: `${CASHFREE_BASE_URL}/orders`,
+      env: IS_PRODUCTION ? "PRODUCTION" : "SANDBOX",
+      appId: CASHFREE_APP_ID.slice(0, 8) + "...",
+      orderId,
+      amount,
+    });
 
-    if (!orderData?.payment_session_id) {
-      console.error("Cashfree order creation failed:", orderData);
+    // Call Cashfree REST API directly
+    const cfResponse = await fetch(`${CASHFREE_BASE_URL}/orders`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-version": "2023-08-01",
+        "x-client-id": CASHFREE_APP_ID,
+        "x-client-secret": CASHFREE_SECRET_KEY,
+      },
+      body: JSON.stringify(orderPayload),
+    });
+
+    const cfData = await cfResponse.json();
+
+    if (!cfResponse.ok) {
+      console.error("Cashfree API error:", {
+        status: cfResponse.status,
+        data: cfData,
+      });
       return NextResponse.json(
-        { error: "Failed to create payment order" },
+        {
+          error: cfData?.message || `Cashfree error: ${cfResponse.status}`,
+          details: cfData,
+        },
+        { status: cfResponse.status }
+      );
+    }
+
+    if (!cfData?.payment_session_id) {
+      console.error("Cashfree order missing payment_session_id:", cfData);
+      return NextResponse.json(
+        { error: "Payment gateway returned invalid response" },
         { status: 500 }
       );
     }
@@ -135,7 +184,7 @@ export async function POST(req: NextRequest) {
         parentId: parentId,
         studentId: invoice.studentId,
         amount: amount,
-        paymentSessionId: orderData.payment_session_id,
+        paymentSessionId: cfData.payment_session_id,
         status: "CREATED",
       },
     });
@@ -143,12 +192,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       orderId: orderId,
-      paymentSessionId: orderData.payment_session_id,
+      paymentSessionId: cfData.payment_session_id,
     });
   } catch (error: any) {
-    console.error("Error creating Cashfree order:", error?.response?.data || error);
+    console.error("Error creating Cashfree order:", error);
     return NextResponse.json(
-      { error: "Failed to create payment order" },
+      { error: error?.message || "Internal server error while creating payment order" },
       { status: 500 }
     );
   }

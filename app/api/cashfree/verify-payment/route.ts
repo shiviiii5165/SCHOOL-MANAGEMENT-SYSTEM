@@ -3,18 +3,14 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { Cashfree: CashfreeSDK, CFEnvironment } = require("cashfree-pg");
 import crypto from "crypto";
 
-// Initialize Cashfree SDK instance
-const cashfree = new CashfreeSDK(
-  process.env.CASHFREE_APP_ID,
-  process.env.CASHFREE_SECRET_KEY,
-  process.env.CASHFREE_ENV === "production"
-    ? CFEnvironment.PRODUCTION
-    : CFEnvironment.SANDBOX
-);
+const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID || "";
+const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY || "";
+const IS_PRODUCTION = process.env.CASHFREE_ENV === "production";
+const CASHFREE_BASE_URL = IS_PRODUCTION
+  ? "https://api.cashfree.com/pg"
+  : "https://sandbox.cashfree.com/pg";
 
 export async function POST(req: NextRequest) {
   try {
@@ -56,11 +52,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Fetch payment status from Cashfree
-    const response = await cashfree.PGOrderFetchPayments("2023-08-01", orderId);
-    const payments = response.data;
+    // Fetch payment status from Cashfree via REST API
+    const cfResponse = await fetch(
+      `${CASHFREE_BASE_URL}/orders/${orderId}/payments`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-version": "2023-08-01",
+          "x-client-id": CASHFREE_APP_ID,
+          "x-client-secret": CASHFREE_SECRET_KEY,
+        },
+      }
+    );
 
-    if (!payments || !Array.isArray(payments) || payments.length === 0) {
+    const payments = await cfResponse.json();
+
+    if (!cfResponse.ok || !Array.isArray(payments) || payments.length === 0) {
       return NextResponse.json({
         success: false,
         message: "No payments found for this order. Payment may still be processing.",
@@ -74,7 +82,6 @@ export async function POST(req: NextRequest) {
     );
 
     if (!successPayment) {
-      // Check if there's a failed payment
       const failedPayment = payments.find(
         (p: any) => p.payment_status === "FAILED" || p.payment_status === "CANCELLED"
       );
@@ -109,7 +116,6 @@ export async function POST(req: NextRequest) {
       successPayment.payment_amount || pendingOrder.amount
     );
 
-    // Fetch updated fees for the student(s) of this parent
     const updatedFees = await getEnrichedFees(pendingOrder.studentId);
 
     return NextResponse.json({
@@ -119,17 +125,14 @@ export async function POST(req: NextRequest) {
       updatedFees,
     });
   } catch (error: any) {
-    console.error("Error verifying payment:", error?.response?.data || error);
+    console.error("Error verifying payment:", error);
     return NextResponse.json(
-      { error: "Failed to verify payment" },
+      { error: error?.message || "Failed to verify payment" },
       { status: 500 }
     );
   }
 }
 
-/**
- * Process a successful payment — mark fee as PAID, create Payment record, update PendingOrder
- */
 async function processSuccessfulPayment(
   pendingOrder: any,
   transactionId: string,
@@ -137,7 +140,6 @@ async function processSuccessfulPayment(
   paidAmount: number
 ) {
   await prisma.$transaction(async (tx) => {
-    // 1. Update CashfreePendingOrder status
     await tx.cashfreePendingOrder.update({
       where: { orderId: pendingOrder.orderId },
       data: {
@@ -147,14 +149,12 @@ async function processSuccessfulPayment(
       },
     });
 
-    // 2. Fetch the invoice
     const invoice = await tx.feeRecord.findUnique({
       where: { id: pendingOrder.feeRecordId },
     });
 
     if (!invoice) return;
 
-    // 3. Calculate late fine
     let lateFine = 0;
     if (invoice.dueDate < new Date() && invoice.status !== "PAID") {
       const daysOverdue = Math.floor(
@@ -171,7 +171,6 @@ async function processSuccessfulPayment(
     const remaining = totalDue - newPaidAmount;
     const newStatus = remaining <= 0 ? "PAID" : "PARTIAL";
 
-    // 4. Create Payment record
     const receiptNumber = `RCP-${new Date().getFullYear()}-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
     await tx.payment.create({
       data: {
@@ -184,7 +183,6 @@ async function processSuccessfulPayment(
       },
     });
 
-    // 5. Update FeeRecord
     await tx.feeRecord.update({
       where: { id: pendingOrder.feeRecordId },
       data: {
@@ -196,7 +194,6 @@ async function processSuccessfulPayment(
       },
     });
 
-    // 6. Handle overpayment — credit to wallet
     if (remaining < 0) {
       const excess = Math.abs(remaining);
       let wallet = await tx.creditWallet.findUnique({
@@ -227,12 +224,7 @@ async function processSuccessfulPayment(
   });
 }
 
-/**
- * Fetch enriched fee records for all students under the same parent
- * Returns the same format as /api/fees/dashboard for instant UI update
- */
 async function getEnrichedFees(studentId: string) {
-  // Find the parent of this student to get all sibling students
   const student = await prisma.student.findUnique({
     where: { id: studentId },
     include: { parent: { include: { students: true } } },
@@ -261,7 +253,6 @@ async function getEnrichedFees(studentId: string) {
     orderBy: { dueDate: "asc" },
   });
 
-  // Enrich with dynamic statuses (same logic as /api/fees/dashboard)
   return feeRecords.map((record) => {
     let lateFine = 0;
     let dynamicStatus = record.status;
