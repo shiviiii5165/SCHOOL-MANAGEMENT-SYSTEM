@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, CreditCard, Building, Smartphone, Wallet, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { createCashfreeOrder } from '@/services/cashfreeService';
 
 interface PaymentModalProps {
   invoice: any;
@@ -16,6 +17,22 @@ export default function PaymentModal({ invoice, wallets, onClose, onSuccess }: P
   const [amount, setAmount] = useState<string>(outstanding.toString());
   const [mode, setMode] = useState<string>('UPI');
   const [loading, setLoading] = useState(false);
+  const [cashfreeLoading, setCashfreeLoading] = useState(false);
+  const cashfreeRef = useRef<any>(null);
+
+  // Initialize Cashfree SDK on mount
+  useEffect(() => {
+    const initCashfree = async () => {
+      try {
+        const { load } = await import('@cashfreepayments/cashfree-js');
+        const cashfreeMode = process.env.NEXT_PUBLIC_CASHFREE_ENV === 'production' ? 'production' : 'sandbox';
+        cashfreeRef.current = await load({ mode: cashfreeMode });
+      } catch (err) {
+        console.error('Failed to load Cashfree SDK:', err);
+      }
+    };
+    initCashfree();
+  }, []);
 
   // Check if there is a wallet for this student
   const wallet = wallets.find(w => w.studentId === invoice.studentId);
@@ -25,38 +42,43 @@ export default function PaymentModal({ invoice, wallets, onClose, onSuccess }: P
 
   const handlePay = async () => {
     const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount < 500) {
-      toast.error("Minimum payment amount is ₹500");
+    if (isNaN(numAmount) || numAmount < 1) {
+      toast.error("Minimum payment amount is ₹1");
       return;
     }
-    
-    if (numAmount > outstanding + 1 && !useWallet) {
-       // It's an overpayment, but they didn't explicitly check a box to send to wallet?
-       // Actually our backend handles overpayment automatically.
-    }
 
-    setLoading(true);
+    setCashfreeLoading(true);
     try {
-      const res = await fetch('/api/fees/pay', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          invoiceId: invoice.id,
-          amount: numAmount,
-          paymentMode: mode,
-          transactionId: `TXN${Date.now()}`
-        })
+      // Step 1: Create Cashfree order via our backend
+      const orderData = await createCashfreeOrder({
+        invoiceId: invoice.id,
+        amount: numAmount,
+        paymentMode: mode,
       });
-      
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      
-      toast.success(data.message || "Payment Successful!");
-      onSuccess();
+
+      // Step 2: Open Cashfree checkout
+      if (!cashfreeRef.current) {
+        throw new Error('Payment gateway is not ready. Please try again.');
+      }
+
+      const checkoutOptions = {
+        paymentSessionId: orderData.paymentSessionId,
+        redirectTarget: "_self" as const,
+      };
+
+      // This will redirect the user to Cashfree's payment page
+      const result = await cashfreeRef.current.checkout(checkoutOptions);
+
+      // If checkout returns (error case — redirect didn't happen)
+      if (result?.error) {
+        console.error('Cashfree checkout error:', result.error);
+        toast.error(result.error.message || 'Payment initiation failed');
+      }
     } catch (err: any) {
-      toast.error(err.message || "Payment failed");
+      console.error('Payment error:', err);
+      toast.error(err.message || "Failed to initiate payment");
     } finally {
-      setLoading(false);
+      setCashfreeLoading(false);
     }
   };
 
@@ -87,12 +109,14 @@ export default function PaymentModal({ invoice, wallets, onClose, onSuccess }: P
     }
   };
 
+  const isProcessing = loading || cashfreeLoading;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90dvh]">
         <div className="flex justify-between items-center p-4 sm:p-6 border-b border-slate-100 shrink-0">
           <h2 className="text-xl font-bold text-slate-800">Pay Fee</h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors">
+          <button onClick={onClose} disabled={isProcessing} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -139,7 +163,7 @@ export default function PaymentModal({ invoice, wallets, onClose, onSuccess }: P
               </div>
               <button 
                 onClick={handleWalletPay} 
-                disabled={loading}
+                disabled={isProcessing}
                 className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors text-sm"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `Pay ₹${Math.min(walletBalance, outstanding).toLocaleString()} from Wallet`}
@@ -156,7 +180,8 @@ export default function PaymentModal({ invoice, wallets, onClose, onSuccess }: P
                 type="number" 
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full pl-8 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none font-medium text-slate-800 transition-all"
+                disabled={isProcessing}
+                className="w-full pl-8 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none font-medium text-slate-800 transition-all disabled:opacity-50"
                 placeholder="Enter amount"
               />
             </div>
@@ -165,19 +190,22 @@ export default function PaymentModal({ invoice, wallets, onClose, onSuccess }: P
             <div className="flex gap-2">
               <button 
                 onClick={() => setAmount(outstanding.toString())}
-                className="flex-1 py-2 text-xs font-semibold bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"
+                disabled={isProcessing}
+                className="flex-1 py-2 text-xs font-semibold bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors disabled:opacity-50"
               >
                 Full
               </button>
               <button 
                 onClick={() => setAmount((Math.round(outstanding / 2 / 10) * 10).toString())}
-                className="flex-1 py-2 text-xs font-semibold bg-slate-50 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
+                disabled={isProcessing}
+                className="flex-1 py-2 text-xs font-semibold bg-slate-50 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
               >
                 Half
               </button>
               <button 
                 onClick={() => setAmount('')}
-                className="flex-1 py-2 text-xs font-semibold bg-slate-50 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors"
+                disabled={isProcessing}
+                className="flex-1 py-2 text-xs font-semibold bg-slate-50 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
               >
                 Custom
               </button>
@@ -197,17 +225,27 @@ export default function PaymentModal({ invoice, wallets, onClose, onSuccess }: P
                 <button
                   key={m.id}
                   onClick={() => setMode(m.id)}
+                  disabled={isProcessing}
                   className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border transition-all ${
                     mode === m.id 
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-700' 
                       : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                  }`}
+                  } disabled:opacity-50`}
                 >
                   <m.icon className="w-5 h-5" />
                   <span className="text-[10px] font-bold uppercase">{m.label}</span>
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Cashfree Badge */}
+          <div className="flex items-center justify-center gap-2 text-xs text-slate-400 pt-1">
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span>Secured by Cashfree Payment Gateway</span>
           </div>
 
           {/* Warning */}
@@ -231,11 +269,19 @@ export default function PaymentModal({ invoice, wallets, onClose, onSuccess }: P
         <div className="p-4 sm:p-6 border-t border-slate-100 shrink-0 bg-white pb-[env(safe-area-inset-bottom,20px)]">
           <button
             onClick={handlePay}
-            disabled={loading}
+            disabled={isProcessing}
             className="w-full py-3.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-indigo-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-            Pay ₹{parseFloat(amount || '0').toLocaleString()}
+            {cashfreeLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Processing...</span>
+              </>
+            ) : loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>Pay ₹{parseFloat(amount || '0').toLocaleString()}</>
+            )}
           </button>
         </div>
       </div>

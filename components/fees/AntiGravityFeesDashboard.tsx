@@ -1,21 +1,28 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   Bell, CheckCircle2, AlertCircle, Calendar, CreditCard, 
   DownloadCloud, HelpCircle, FileText, Smartphone, Wallet,
-  Building, CheckCircle, ChevronRight, PieChart as PieChartIcon, Loader2, Clock
+  Building, CheckCircle, ChevronRight, PieChart as PieChartIcon, Loader2, Clock,
+  ShieldCheck
 } from 'lucide-react';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip 
 } from 'recharts';
+import toast from 'react-hot-toast';
 import PaymentModal from './PaymentModal';
+import { verifyCashfreePayment } from '@/services/cashfreeService';
 
 export default function AntiGravityFeesDashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [paymentInvoice, setPaymentInvoice] = useState<any>(null);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const verifyAttempted = useRef(false);
+  const searchParams = useSearchParams();
 
   const fetchData = async () => {
     try {
@@ -38,8 +45,97 @@ export default function AntiGravityFeesDashboard() {
     fetchData();
   }, []);
 
+  // ── Cashfree Payment Redirect Handler ──
+  // After Cashfree redirects back, URL contains order_id & payment_status
+  useEffect(() => {
+    if (verifyAttempted.current) return;
+
+    const orderId = searchParams.get('order_id');
+    const paymentStatus = searchParams.get('payment_status');
+    const feeId = searchParams.get('fee_id');
+
+    if (!orderId) return;
+    verifyAttempted.current = true;
+
+    const verifyPayment = async () => {
+      setVerifyingPayment(true);
+
+      try {
+        if (paymentStatus !== 'SUCCESS') {
+          toast.error('Payment was not completed. Please try again.', {
+            duration: 5000,
+            icon: '❌',
+          });
+          return;
+        }
+
+        const result = await verifyCashfreePayment({ orderId });
+
+        if (result.success && result.updatedFees) {
+          // ── INSTANT UI UPDATE ──
+          // Replace feeRecords in state → triggers re-render of:
+          //   • Pending Dues list (paid fee disappears)
+          //   • Total Outstanding amount
+          //   • Donut chart percentage
+          setData((prev: any) => ({
+            ...prev,
+            feeRecords: result.updatedFees,
+          }));
+
+          toast.success(
+            `Payment Successful! ✅\nTransaction ID: ${result.transactionId || orderId}`,
+            {
+              duration: 6000,
+              style: {
+                background: '#10B981',
+                color: '#fff',
+                fontWeight: '600',
+                borderRadius: '12px',
+                padding: '16px',
+              },
+            }
+          );
+        } else {
+          // Verification returned non-success (e.g. PENDING/FAILED)
+          toast.error(result.message || 'Payment verification failed', {
+            duration: 5000,
+          });
+          // Still refresh data from server
+          fetchData();
+        }
+      } catch (err: any) {
+        console.error('Payment verification error:', err);
+        toast.error(err.message || 'Failed to verify payment. Refreshing...');
+        // Fallback: full data refresh
+        fetchData();
+      } finally {
+        setVerifyingPayment(false);
+        // Clean URL params
+        window.history.replaceState({}, '', '/parent/fees');
+      }
+    };
+
+    verifyPayment();
+  }, [searchParams]);
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-[#F8FAFF]"><Loader2 className="w-8 h-8 animate-spin text-indigo-600" /></div>;
+  }
+
+  // Payment verification overlay
+  if (verifyingPayment) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8FAFF] gap-4">
+        <div className="relative">
+          <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center animate-pulse">
+            <ShieldCheck className="w-10 h-10 text-indigo-600" />
+          </div>
+          <Loader2 className="w-6 h-6 animate-spin text-indigo-600 absolute -bottom-1 -right-1" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-800">Verifying Payment...</h2>
+        <p className="text-sm text-slate-500">Please wait while we confirm your payment.</p>
+      </div>
+    );
   }
 
   if (!data || !data.students || data.students.length === 0) {

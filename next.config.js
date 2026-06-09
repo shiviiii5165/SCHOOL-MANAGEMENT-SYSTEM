@@ -40,11 +40,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://sdk.cashfree.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https:",
-              "connect-src 'self' wss: https:",
+              "connect-src 'self' wss: https: https://*.cashfree.com",
+              "frame-src 'self' https://*.cashfree.com",
               "frame-ancestors 'none'",
             ].join('; ')
           },

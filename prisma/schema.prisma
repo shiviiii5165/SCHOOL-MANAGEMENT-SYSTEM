@@ -245,9 +245,10 @@ model FeeRecord {
   hasInstallmentPlan Boolean           @default(false)
   installmentPlanId  String?
   lastPaymentAt      DateTime?
-  student            Student           @relation(fields: [studentId], references: [id])
+  student            Student                @relation(fields: [studentId], references: [id])
   installmentPlans   InstallmentPlan[]
   payments           Payment[]
+  cashfreeOrders     CashfreePendingOrder[]
 
   @@index([studentId, status])
   @@index([dueDate, status])
@@ -318,6 +319,28 @@ model CreditWalletTransaction {
   relatedFeeRecordId String?
   createdAt          DateTime     @default(now())
   wallet             CreditWallet @relation(fields: [walletId], references: [id])
+}
+
+model CashfreePendingOrder {
+  id               String    @id @default(cuid())
+  orderId          String    @unique
+  feeRecordId      String
+  parentId         String
+  studentId        String
+  amount           Float
+  paymentSessionId String
+  status           String    @default("CREATED")
+  paymentMethod    String?
+  transactionId    String?
+  failureReason    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  feeRecord        FeeRecord @relation(fields: [feeRecordId], references: [id])
+
+  @@index([orderId])
+  @@index([feeRecordId])
+  @@index([status])
 }
 
 model DisciplineReport {
