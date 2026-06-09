@@ -91,5 +91,23 @@ export default async function AdminFeesPage() {
     defaulterCount: defaulters.length
   };
 
-  return <AdminFeesClient data={data} stats={stats} defaulters={defaulters} />;
+  const recentPaymentsQuery = await prisma.payment.findMany({
+    take: 10,
+    orderBy: { paymentDate: 'desc' },
+    include: {
+      student: { include: { user: true, class: true } },
+      feeRecord: true
+    }
+  });
+
+  const recentPayments = recentPaymentsQuery.map(p => ({
+    id: p.id,
+    studentName: p.student.user.name,
+    rollNo: p.student.rollNo,
+    feeType: p.feeRecord?.feeType || 'Unknown',
+    amount: p.amount,
+    paymentDate: p.paymentDate
+  }));
+
+  return <AdminFeesClient data={data} stats={stats} defaulters={defaulters} recentPayments={recentPayments} />;
 }

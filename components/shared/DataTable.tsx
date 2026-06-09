@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { 
   ChevronDown, ChevronUp, Search, MoreHorizontal, 
   Edit, Eye, Trash2, CheckSquare, Square
@@ -26,6 +26,10 @@ interface DataTableProps<T> {
   emptyStateDesc?: string;
   emptyStateAction?: { label: string; onClick: () => void };
   onSearchChange?: (val: string) => void;
+  selectedIds?: Set<string>;
+  onSelectionChange?: (ids: Set<string>) => void;
+  onFilteredDataChange?: (filteredData: T[]) => void;
+  rowClassName?: (item: T) => string;
 }
 
 export default function DataTable<T extends { id: string }>({
@@ -40,12 +44,27 @@ export default function DataTable<T extends { id: string }>({
   emptyStateDesc = "There are no records to display at this time.",
   emptyStateAction,
   onSearchChange,
+  selectedIds: controlledSelectedIds,
+  onSelectionChange,
+  onFilteredDataChange,
+  rowClassName,
 }: DataTableProps<T>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [internalSelectedIds, setInternalSelectedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+
+  const selectedIds = controlledSelectedIds !== undefined ? controlledSelectedIds : internalSelectedIds;
+
+  const updateSelection = (newIds: Set<string>) => {
+    if (controlledSelectedIds === undefined) {
+      setInternalSelectedIds(newIds);
+    }
+    if (onSelectionChange) {
+      onSelectionChange(newIds);
+    }
+  };
 
   // Filter
   const filteredData = data.filter((item) => {
@@ -54,6 +73,16 @@ export default function DataTable<T extends { id: string }>({
       String(val).toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
+
+  // Call onFilteredDataChange whenever filteredData changes
+  // We use a ref to avoid infinite loops if the parent doesn't memoize the callback
+  const prevFilteredRef = useRef<T[]>([]);
+  useEffect(() => {
+    if (onFilteredDataChange && prevFilteredRef.current !== filteredData) {
+      prevFilteredRef.current = filteredData;
+      onFilteredDataChange(filteredData);
+    }
+  }, [filteredData, onFilteredDataChange]);
 
   // Sort
   const sortedData = [...filteredData].sort((a: any, b: any) => {
@@ -80,10 +109,10 @@ export default function DataTable<T extends { id: string }>({
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === paginatedData.length) {
-      setSelectedIds(new Set());
+    if (selectedIds.size === paginatedData.length && paginatedData.length > 0) {
+      updateSelection(new Set());
     } else {
-      setSelectedIds(new Set(paginatedData.map(d => d.id)));
+      updateSelection(new Set(paginatedData.map(d => d.id)));
     }
   };
 
@@ -94,7 +123,7 @@ export default function DataTable<T extends { id: string }>({
     } else {
       newSelected.add(id);
     }
-    setSelectedIds(newSelected);
+    updateSelection(newSelected);
   };
 
   if (data.length === 0) {
@@ -224,7 +253,7 @@ export default function DataTable<T extends { id: string }>({
             {paginatedData.map((item) => (
               <tr 
                 key={item.id} 
-                className="border-b border-border last:border-0 hover:bg-background/60 transition-colors group"
+                className={`border-b border-border last:border-0 hover:bg-background/60 transition-colors group ${rowClassName ? rowClassName(item) : ''}`}
               >
                 <td className="px-4 py-3">
                   <button onClick={() => toggleSelect(item.id)} className="text-text-muted hover:text-text-primary transition-colors min-h-[44px] flex items-center justify-center">
