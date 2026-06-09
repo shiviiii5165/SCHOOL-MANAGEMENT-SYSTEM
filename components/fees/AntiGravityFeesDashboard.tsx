@@ -46,12 +46,12 @@ export default function AntiGravityFeesDashboard() {
   }, []);
 
   // ── Cashfree Payment Redirect Handler ──
-  // After Cashfree redirects back, URL contains order_id & payment_status
+  // After Cashfree redirects back, URL contains order_id & fee_id
+  // We always verify via our API which checks directly with Cashfree
   useEffect(() => {
     if (verifyAttempted.current) return;
 
     const orderId = searchParams.get('order_id');
-    const paymentStatus = searchParams.get('payment_status');
     const feeId = searchParams.get('fee_id');
 
     if (!orderId) return;
@@ -61,14 +61,6 @@ export default function AntiGravityFeesDashboard() {
       setVerifyingPayment(true);
 
       try {
-        if (paymentStatus !== 'SUCCESS') {
-          toast.error('Payment was not completed. Please try again.', {
-            duration: 5000,
-            icon: '❌',
-          });
-          return;
-        }
-
         const result = await verifyCashfreePayment({ orderId });
 
         if (result.success && result.updatedFees) {
