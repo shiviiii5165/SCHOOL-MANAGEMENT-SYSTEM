@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
         customer_phone: (parentUser?.phone || "9999999999").replace(/[^0-9]/g, "").slice(-10),
       },
       order_meta: {
-        return_url: `${frontendUrl}/parent/fees?order_id={order_id}&fee_id=${invoiceId}`,
+        return_url: `${frontendUrl}/parent/fees?order_id=${orderId}&fee_id=${invoiceId}`,
       },
       order_note: `Fee payment for ${invoice.feeType} - ${invoice.student.user.name}`,
     };
