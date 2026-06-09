@@ -115,6 +115,13 @@ export async function POST(req: NextRequest) {
     // Sanitize customer_id — Cashfree requires alphanumeric + _ - .
     const customerId = (parentId || session.user.id).replace(/[^a-zA-Z0-9_\-\.]/g, "_").slice(0, 50);
 
+    // Build return URL using URL constructor for proper encoding
+    const baseUrl = frontendUrl.trim().replace(/\/+$/, "");
+    const returnUrl = new URL(`${baseUrl}/parent/fees`);
+    returnUrl.searchParams.set("order_id", orderId);
+    returnUrl.searchParams.set("fee_id", invoiceId);
+    const returnUrlString = returnUrl.toString();
+
     // Build order payload
     const orderPayload = {
       order_id: orderId,
@@ -127,7 +134,7 @@ export async function POST(req: NextRequest) {
         customer_phone: (parentUser?.phone || "9999999999").replace(/[^0-9]/g, "").slice(-10),
       },
       order_meta: {
-        return_url: `${frontendUrl}/parent/fees?order_id=${orderId}&fee_id=${invoiceId}`,
+        return_url: returnUrlString,
       },
       order_note: `Fee payment for ${invoice.feeType} - ${invoice.student.user.name}`,
     };
@@ -138,6 +145,7 @@ export async function POST(req: NextRequest) {
       appId: CASHFREE_APP_ID.slice(0, 8) + "...",
       orderId,
       amount,
+      returnUrl: returnUrlString,
     });
 
     // Call Cashfree REST API directly
