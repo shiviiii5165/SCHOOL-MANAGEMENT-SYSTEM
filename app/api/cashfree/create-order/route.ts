@@ -116,8 +116,9 @@ export async function POST(req: NextRequest) {
     const customerId = (parentId || session.user.id).replace(/[^a-zA-Z0-9_\-\.]/g, "_").slice(0, 50);
 
     // Build return URL using URL constructor for proper encoding
+    const returnPath = role === "STUDENT" ? "/student/fees" : "/parent/fees";
     const baseUrl = frontendUrl.trim().replace(/\/+$/, "");
-    const returnUrl = new URL(`${baseUrl}/parent/fees`);
+    const returnUrl = new URL(`${baseUrl}${returnPath}`);
     returnUrl.searchParams.set("order_id", orderId);
     returnUrl.searchParams.set("fee_id", invoiceId);
     const returnUrlString = returnUrl.toString();

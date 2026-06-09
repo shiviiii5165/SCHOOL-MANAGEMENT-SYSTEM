@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import { 
   Bell, CheckCircle2, AlertCircle, Calendar, CreditCard, 
   DownloadCloud, HelpCircle, FileText, Smartphone, Wallet,
@@ -23,6 +23,10 @@ export default function AntiGravityFeesDashboard() {
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const verifyAttempted = useRef(false);
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  
+  const basePath = pathname?.includes('/student') ? '/student/fees' : '/parent/fees';
 
   const fetchData = async () => {
     try {
@@ -103,7 +107,7 @@ export default function AntiGravityFeesDashboard() {
       } finally {
         setVerifyingPayment(false);
         // Clean URL params
-        window.history.replaceState({}, '', '/parent/fees');
+        window.history.replaceState({}, '', basePath);
       }
     };
 
@@ -298,7 +302,7 @@ export default function AntiGravityFeesDashboard() {
                   >
                     Pay Next Due
                   </button>
-                  <a href="/parent/fees/history" className="px-6 py-3 bg-white/50 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-white transition-all flex items-center justify-center">
+                  <a href={`${basePath}/history`} className="px-6 py-3 bg-white/50 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-white transition-all flex items-center justify-center">
                     Payment History
                   </a>
                 </div>
@@ -505,7 +509,7 @@ export default function AntiGravityFeesDashboard() {
             {/* Quick Actions */}
             <div className={`${glassCard} space-y-4`}>
               <h3 className="text-lg font-bold text-slate-800 mb-4">Quick Links</h3>
-              <a href="/parent/fees/history" className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-indigo-50 rounded-xl transition-colors group">
+              <a href={`${basePath}/history`} className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-indigo-50 rounded-xl transition-colors group">
                 <div className="flex items-center gap-3 text-slate-700 group-hover:text-indigo-700">
                   <DownloadCloud className="w-5 h-5" />
                   <span className="font-semibold text-sm">Download Receipts</span>
