@@ -7,7 +7,12 @@ export interface Notice {
   id: string;
   title: string;
   content: string;
-  category: "General" | "Academic" | "Event" | "Urgent";
+  category: "GENERAL" | "ACADEMIC" | "EVENT" | "URGENT" | "FEE_RELATED" | "HOLIDAY" | string;
+  priority?: "NORMAL" | "HIGH" | "URGENT" | string;
+  targetAudience?: string;
+  targetClassName?: string;
+  authorName?: string;
+  authorRole?: string;
   date: string;
   isPinned?: boolean;
   isNew?: boolean;
@@ -16,20 +21,26 @@ export interface Notice {
 interface NoticeBoardProps {
   notices: Notice[];
   isAdmin?: boolean;
+  isTeacher?: boolean;
+  currentUserId?: string;
+  onDelete?: (id: string) => void;
+  onPin?: (id: string) => void;
 }
 
-const categoryColors = {
-  General: "bg-status-info-bg text-status-info-text border-status-info/20",
-  Academic: "bg-primary-light text-primary border-primary/20",
-  Event: "bg-status-success-bg text-status-success-text border-status-success/20",
-  Urgent: "bg-status-danger-bg text-status-danger-text border-status-danger/20",
+const categoryColors: Record<string, string> = {
+  GENERAL: "bg-status-info-bg text-status-info-text border-status-info/20",
+  ACADEMIC: "bg-primary-light text-primary border-primary/20",
+  EVENT: "bg-status-success-bg text-status-success-text border-status-success/20",
+  URGENT: "bg-status-danger-bg text-status-danger-text border-status-danger/20",
+  FEE_RELATED: "bg-status-warning-bg text-status-warning-text border-status-warning/20",
+  HOLIDAY: "bg-purple-100 text-purple-700 border-purple-200",
 };
 
-export default function NoticeBoard({ notices, isAdmin = false }: NoticeBoardProps) {
+export default function NoticeBoard({ notices, isAdmin = false, isTeacher = false, currentUserId, onDelete, onPin }: NoticeBoardProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("All");
 
-  const categories = ["All", "General", "Academic", "Event", "Urgent"];
+  const categories = ["All", "GENERAL", "ACADEMIC", "EVENT", "URGENT", "FEE_RELATED", "HOLIDAY"];
 
   const filteredNotices = notices.filter((notice) => {
     const matchesSearch = notice.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -40,6 +51,13 @@ export default function NoticeBoard({ notices, isAdmin = false }: NoticeBoardPro
 
   const pinnedNotices = filteredNotices.filter(n => n.isPinned);
   const regularNotices = filteredNotices.filter(n => !n.isPinned);
+
+  // Urgent notices get priority
+  regularNotices.sort((a, b) => {
+    if (a.priority === "URGENT" && b.priority !== "URGENT") return -1;
+    if (a.priority !== "URGENT" && b.priority === "URGENT") return 1;
+    return 0;
+  });
 
   const displayNotices = [...pinnedNotices, ...regularNotices];
 
@@ -82,11 +100,13 @@ export default function NoticeBoard({ notices, isAdmin = false }: NoticeBoardPro
             <div 
               key={notice.id}
               className={`p-4 rounded-lg border transition-all cursor-pointer hover:shadow-md group ${
-                notice.isPinned 
-                  ? "bg-status-warning-bg/30 border-status-warning/20" 
-                  : notice.isNew 
-                    ? "bg-primary-light/20 border-primary/20"
-                    : "bg-surface border-transparent hover:border-border"
+                notice.priority === 'URGENT' 
+                  ? "border-status-danger bg-status-danger-bg/10" 
+                  : notice.isPinned 
+                    ? "bg-status-warning-bg/30 border-status-warning/20" 
+                    : notice.isNew 
+                      ? "bg-primary-light/20 border-primary/20"
+                      : "bg-surface border-transparent hover:border-border"
               }`}
             >
               <div className="flex items-start justify-between gap-4 mb-2">
@@ -101,14 +121,21 @@ export default function NoticeBoard({ notices, isAdmin = false }: NoticeBoardPro
                       New
                     </span>
                   )}
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${categoryColors[notice.category]}`}>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${categoryColors[notice.category] || categoryColors.GENERAL}`}>
                     {notice.category}
                   </span>
+                  {notice.priority === "URGENT" && (
+                     <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-white bg-status-danger px-2 py-0.5 rounded">
+                       <AlertCircle className="w-3 h-3" /> URGENT
+                     </span>
+                  )}
                 </div>
-                <span className="text-xs text-text-muted flex items-center gap-1 whitespace-nowrap">
-                  <Calendar className="w-3 h-3" />
-                  {new Date(notice.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-xs text-text-muted flex items-center gap-1 whitespace-nowrap">
+                    <Calendar className="w-3 h-3" />
+                    {new Date(notice.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </span>
+                </div>
               </div>
               
               <h4 className="text-sm font-semibold text-text-primary mb-1.5 group-hover:text-primary transition-colors line-clamp-2">
@@ -118,12 +145,25 @@ export default function NoticeBoard({ notices, isAdmin = false }: NoticeBoardPro
                 {notice.content}
               </p>
               
-              {isAdmin && (
+              <div className="mt-3 flex items-center justify-between">
+                <span className="text-[10px] font-medium text-text-muted">
+                  Posted by: {notice.authorName} {notice.authorRole === "TEACHER" ? "(Teacher)" : "(Admin)"}
+                  {notice.targetClassName && ` • For: ${notice.targetClassName}`}
+                </span>
+              </div>
+              
+              {isAdmin || isTeacher ? (
                 <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="text-xs font-medium text-text-muted hover:text-primary transition-colors">Edit</button>
-                  <button className="text-xs font-medium text-text-muted hover:text-status-danger-text transition-colors">Delete</button>
+                  {onPin && (
+                    <button onClick={() => onPin(notice.id)} className="text-xs font-medium text-text-muted hover:text-status-warning-text transition-colors">
+                      {notice.isPinned ? "Unpin" : "Pin"}
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button onClick={() => onDelete(notice.id)} className="text-xs font-medium text-text-muted hover:text-status-danger-text transition-colors">Delete</button>
+                  )}
                 </div>
-              )}
+              ) : null}
             </div>
           ))}
           

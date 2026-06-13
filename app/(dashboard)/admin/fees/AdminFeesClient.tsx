@@ -72,8 +72,8 @@ export default function AdminFeesClient({ data, stats, defaulters, recentPayment
       if (quickFilter === 'OVERDUE') return item.status === 'OVERDUE';
       if (quickFilter === 'PAID_TODAY') {
         if (!item.lastPaymentAt) return false;
-        const today = new Date().toISOString().split('T')[0];
-        const lastPaymentDate = new Date(item.lastPaymentAt).toISOString().split('T')[0];
+        const today = new Date().toLocaleDateString();
+        const lastPaymentDate = new Date(item.lastPaymentAt).toLocaleDateString();
         return today === lastPaymentDate;
       }
       return true;

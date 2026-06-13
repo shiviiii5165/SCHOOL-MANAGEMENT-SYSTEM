@@ -5,29 +5,33 @@ import { useRouter } from "next/navigation";
 import NoticeBoard, { Notice } from "@/components/shared/NoticeBoard";
 import { Plus, X, Loader2 } from "lucide-react";
 
-interface AdminNoticesClientProps {
-  notices: Notice[];
+interface TeacherNoticesClientProps {
+  notices: (Notice & { isOwn?: boolean })[];
   classes: { id: string; name: string; section: string }[];
+  currentUserId: string;
 }
 
-export default function AdminNoticesClient({ notices, classes }: AdminNoticesClientProps) {
+export default function TeacherNoticesClient({ notices, classes, currentUserId }: TeacherNoticesClientProps) {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"SCHOOL" | "MY_NOTICES">("SCHOOL");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const [formData, setFormData] = useState({
     title: "",
     content: "",
     category: "GENERAL",
     priority: "NORMAL",
-    targetAudience: "EVERYONE",
-    targetClassId: ""
+    targetAudience: "SPECIFIC_CLASS",
+    targetClassId: classes.length > 0 ? classes[0].id : ""
   });
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this notice?")) return;
     try {
-      await fetch(`/api/notices/${id}`, { method: "DELETE" });
-      router.refresh();
+      const res = await fetch(`/api/notices/${id}`, { method: "DELETE" });
+      if (res.ok) router.refresh();
+      else alert("Failed to delete notice");
     } catch (e) {
       alert("Failed to delete notice");
     }
@@ -35,8 +39,9 @@ export default function AdminNoticesClient({ notices, classes }: AdminNoticesCli
 
   const handlePin = async (id: string) => {
     try {
-      await fetch(`/api/notices/${id}/pin`, { method: "PATCH" });
-      router.refresh();
+      const res = await fetch(`/api/notices/${id}/pin`, { method: "PATCH" });
+      if (res.ok) router.refresh();
+      else alert("Failed to pin notice");
     } catch (e) {
       alert("Failed to pin notice");
     }
@@ -44,6 +49,8 @@ export default function AdminNoticesClient({ notices, classes }: AdminNoticesCli
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.targetClassId) return alert("Please select a class");
+    
     setIsSubmitting(true);
     try {
       const res = await fetch("/api/notices", {
@@ -53,8 +60,9 @@ export default function AdminNoticesClient({ notices, classes }: AdminNoticesCli
       });
       if (res.ok) {
         setIsModalOpen(false);
-        setFormData({ title: "", content: "", category: "GENERAL", priority: "NORMAL", targetAudience: "EVERYONE", targetClassId: "" });
+        setFormData({ title: "", content: "", category: "GENERAL", priority: "NORMAL", targetAudience: "SPECIFIC_CLASS", targetClassId: classes.length > 0 ? classes[0].id : "" });
         router.refresh();
+        setActiveTab("MY_NOTICES");
       } else {
         const error = await res.json();
         alert(error.error || "Failed to create notice");
@@ -66,27 +74,49 @@ export default function AdminNoticesClient({ notices, classes }: AdminNoticesCli
     }
   };
 
+  const displayedNotices = activeTab === "MY_NOTICES" 
+    ? notices.filter(n => n.isOwn)
+    : notices.filter(n => !n.isOwn);
+
   return (
     <div className="space-y-6 h-[calc(100vh-120px)] flex flex-col relative">
       <div className="shrink-0 flex justify-between items-end">
         <div>
-          <h1 className="text-2xl font-display font-bold text-text-primary">Notice Board Management</h1>
-          <p className="text-sm text-text-secondary mt-1">Create and manage school-wide announcements</p>
+          <h1 className="text-2xl font-display font-bold text-text-primary">Notices</h1>
+          <p className="text-sm text-text-secondary mt-1">View school announcements and manage class notices</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
           className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-hover transition-colors font-medium text-sm shadow-sm"
         >
-          <Plus className="w-4 h-4" /> Create Notice
+          <Plus className="w-4 h-4" /> Post Notice
+        </button>
+      </div>
+
+      <div className="flex gap-4 border-b border-border shrink-0">
+        <button
+          className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === "SCHOOL" ? "text-primary" : "text-text-secondary hover:text-text-primary"}`}
+          onClick={() => setActiveTab("SCHOOL")}
+        >
+          School Notices
+          {activeTab === "SCHOOL" && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full" />}
+        </button>
+        <button
+          className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === "MY_NOTICES" ? "text-primary" : "text-text-secondary hover:text-text-primary"}`}
+          onClick={() => setActiveTab("MY_NOTICES")}
+        >
+          My Posted Notices
+          {activeTab === "MY_NOTICES" && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full" />}
         </button>
       </div>
 
       <div className="flex-1 min-h-0">
         <NoticeBoard 
-          notices={notices} 
-          isAdmin={true} 
-          onDelete={handleDelete}
-          onPin={handlePin}
+          notices={displayedNotices} 
+          isTeacher={true} 
+          currentUserId={currentUserId}
+          onDelete={activeTab === "MY_NOTICES" ? handleDelete : undefined}
+          onPin={activeTab === "MY_NOTICES" ? handlePin : undefined}
         />
       </div>
 
@@ -94,7 +124,7 @@ export default function AdminNoticesClient({ notices, classes }: AdminNoticesCli
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
           <div className="bg-surface rounded-xl shadow-xl w-full max-w-lg overflow-hidden border border-border">
             <div className="flex items-center justify-between p-4 border-b border-border bg-background/50">
-              <h2 className="font-semibold text-lg">Create New Notice</h2>
+              <h2 className="font-semibold text-lg">Post Class Notice</h2>
               <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-border rounded-lg transition-colors">
                 <X className="w-5 h-5 text-text-secondary" />
               </button>
@@ -108,7 +138,7 @@ export default function AdminNoticesClient({ notices, classes }: AdminNoticesCli
                   value={formData.title}
                   onChange={e => setFormData({ ...formData, title: e.target.value })}
                   className="w-full p-2 border rounded-lg bg-background text-sm"
-                  placeholder="E.g. School Closed for Diwali"
+                  placeholder="E.g. Homework Assignment"
                 />
               </div>
 
@@ -124,8 +154,6 @@ export default function AdminNoticesClient({ notices, classes }: AdminNoticesCli
                     <option value="ACADEMIC">Academic</option>
                     <option value="EVENT">Event</option>
                     <option value="URGENT">Urgent</option>
-                    <option value="FEE_RELATED">Fee Related</option>
-                    <option value="HOLIDAY">Holiday</option>
                   </select>
                 </div>
                 <div>
@@ -143,36 +171,19 @@ export default function AdminNoticesClient({ notices, classes }: AdminNoticesCli
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Target Audience</label>
+                <label className="block text-sm font-medium mb-1">Select Class (Target)</label>
                 <select
-                  value={formData.targetAudience}
-                  onChange={e => setFormData({ ...formData, targetAudience: e.target.value })}
+                  required
+                  value={formData.targetClassId}
+                  onChange={e => setFormData({ ...formData, targetClassId: e.target.value })}
                   className="w-full p-2 border rounded-lg bg-background text-sm"
                 >
-                  <option value="EVERYONE">Everyone</option>
-                  <option value="ALL_STUDENTS">All Students</option>
-                  <option value="ALL_PARENTS">All Parents</option>
-                  <option value="ALL_TEACHERS">All Teachers</option>
-                  <option value="SPECIFIC_CLASS">Specific Class</option>
+                  <option value="">Select a class...</option>
+                  {classes.map(c => (
+                    <option key={c.id} value={c.id}>{c.name} - {c.section}</option>
+                  ))}
                 </select>
               </div>
-
-              {formData.targetAudience === "SPECIFIC_CLASS" && (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Select Class</label>
-                  <select
-                    required
-                    value={formData.targetClassId}
-                    onChange={e => setFormData({ ...formData, targetClassId: e.target.value })}
-                    className="w-full p-2 border rounded-lg bg-background text-sm"
-                  >
-                    <option value="">Select a class...</option>
-                    {classes.map(c => (
-                      <option key={c.id} value={c.id}>{c.name} - {c.section}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               <div>
                 <label className="block text-sm font-medium mb-1">Content</label>
@@ -196,8 +207,8 @@ export default function AdminNoticesClient({ notices, classes }: AdminNoticesCli
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-2"
+                  disabled={isSubmitting || classes.length === 0}
+                  className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publish Notice"}
                 </button>

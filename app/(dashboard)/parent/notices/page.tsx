@@ -1,28 +1,31 @@
 import { prisma } from "@/lib/prisma";
-import StudentNoticesClient from "./StudentNoticesClient";
+import ParentNoticesClient from "./ParentNoticesClient";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
-export default async function StudentNoticesPage() {
+export default async function ParentNoticesPage() {
   const session = await auth();
-  if (!session || !session.user || session.user.role !== "STUDENT") {
+  if (!session || !session.user || session.user.role !== "PARENT") {
     redirect("/login");
   }
 
   try {
-    const student = await prisma.student.findUnique({
-      where: { userId: session.user.id }
+    const parent = await prisma.parent.findUnique({
+      where: { userId: session.user.id },
+      include: { students: true }
     });
 
-    if (!student) {
-      return <div className="p-8 text-center text-status-danger">Student profile not found.</div>;
+    if (!parent) {
+      return <div className="p-8 text-center text-status-danger">Parent profile not found.</div>;
     }
+
+    const childClassIds = parent.students.map(s => s.classId);
 
     const notices = await prisma.notice.findMany({
       where: {
         OR: [
-          { targetAudience: { in: ["ALL_STUDENTS", "EVERYONE"] } },
-          { targetAudience: "SPECIFIC_CLASS", targetClassId: student.classId }
+          { targetAudience: { in: ["ALL_PARENTS", "EVERYONE"] } },
+          { targetAudience: "SPECIFIC_CLASS", targetClassId: { in: childClassIds } }
         ]
       },
       include: {
@@ -55,7 +58,7 @@ export default async function StudentNoticesPage() {
       isNew: (new Date().getTime() - notice.createdAt.getTime()) < 7 * 24 * 60 * 60 * 1000
     }));
 
-    return <StudentNoticesClient notices={formattedNotices} />;
+    return <ParentNoticesClient notices={formattedNotices} />;
   } catch (error: any) {
     console.error("Notices page error:", error);
     return (

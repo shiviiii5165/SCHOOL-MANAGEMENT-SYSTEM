@@ -18,6 +18,7 @@ export const getNavItems = (role: string) => {
         { label: "Exams", href: "/admin/exams", icon: Trophy },
         { label: "Discipline Center", href: "/admin/discipline", icon: ShieldAlert, alert: true },
         { label: "Reports", href: "/admin/reports", icon: FileText },
+        { label: "Notices", href: "/admin/notices", icon: ClipboardList },
         { label: "Settings", href: "/admin/settings", icon: Settings },
         { label: "Messages", href: "/admin/messages", icon: MessageSquare },
       ];
@@ -28,6 +29,7 @@ export const getNavItems = (role: string) => {
         { label: "Assignments", href: "/teacher/assignments", icon: BookOpen },
         { label: "Exams", href: "/teacher/exams", icon: Trophy },
         { label: "Discipline", href: "/teacher/discipline", icon: ShieldAlert },
+        { label: "Notices", href: "/teacher/notices", icon: ClipboardList },
         { label: "Timetable", href: "/teacher/timetable", icon: CalendarDays },
         { label: "Messages", href: "/teacher/messages", icon: MessageSquare },
       ];
@@ -49,6 +51,7 @@ export const getNavItems = (role: string) => {
         { label: "Child Exams", href: "/parent/exams", icon: Trophy },
         { label: "Child Results", href: "/parent/results", icon: FileText },
         { label: "Child Assignments", href: "/parent/assignments", icon: BookOpen },
+        { label: "Notices", href: "/parent/notices", icon: ClipboardList },
         { label: "Fees", href: "/parent/fees", icon: CreditCard },
         { label: "Messages", href: "/parent/messages", icon: MessageSquare },
       ];

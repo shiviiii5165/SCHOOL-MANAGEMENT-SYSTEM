@@ -38,6 +38,7 @@ model User {
   paymentsReceived        Payment[]
   student                 Student?
   teacher                 Teacher?
+  notices                 Notice[]
 }
 
 model Student {
@@ -124,6 +125,7 @@ model Class {
   students           Student[]
   subjects           Subject[]
   timetablePeriods   TimetablePeriod[]
+  targetedNotices    Notice[]
 }
 
 model Subject {
@@ -372,13 +374,31 @@ model DisciplineReport {
 }
 
 model Notice {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  audience  String[]
-  postedBy  String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id            String         @id @default(cuid())
+  title         String
+  content       String         @db.Text
+  category      NoticeCategory
+  priority      NoticePriority @default(NORMAL)
+  targetAudience NoticeTarget
+  targetClassId String?
+  createdById   String
+  createdByRole String
+  isPinned      Boolean        @default(false)
+  expiresAt     DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // Kept for migration backwards compatibility without data loss prompt
+  audience      String[]
+  postedBy      String?
+  isActive      Boolean?       @default(true)
+
+  createdBy     User           @relation(fields: [createdById], references: [id])
+  targetClass   Class?         @relation(fields: [targetClassId], references: [id])
+
+  @@index([targetAudience])
+  @@index([targetClassId])
+  @@index([createdById])
 }
 
 model Leave {
@@ -621,6 +641,30 @@ enum NotificationType {
   FEE
   ACADEMIC
   SYSTEM
+  NOTICE
+}
+
+enum NoticeCategory {
+  GENERAL
+  ACADEMIC
+  EVENT
+  URGENT
+  FEE_RELATED
+  HOLIDAY
+}
+
+enum NoticePriority {
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum NoticeTarget {
+  ALL_STUDENTS
+  ALL_TEACHERS
+  ALL_PARENTS
+  SPECIFIC_CLASS
+  EVERYONE
 }
 
 enum ExamType {
