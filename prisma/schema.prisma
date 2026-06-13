@@ -364,6 +364,14 @@ model DisciplineReport {
   suspendedUntil DateTime?
   warningNote    String?
   resolvedAt     DateTime?
+  fineAmount     Float?
+  fineReason     String?
+  fineStatus     FineStatus? @default(PENDING)
+  fineDueDate    DateTime?
+  finePaidAt     DateTime?
+  finePaidAmount Float?
+  feeRecordId    String?     @unique
+
   createdAt      DateTime    @default(now())
   teacher        Teacher     @relation(fields: [reportedBy], references: [id])
   student        Student     @relation(fields: [studentId], references: [id])
@@ -633,6 +641,17 @@ enum ActionType {
   WARNING
   SUSPENSION
   DISMISSED
+  FINE_ONLY
+  WARNING_WITH_FINE
+  SUSPENDED_WITH_FINE
+}
+
+enum FineStatus {
+  PENDING
+  PAID
+  WAIVED
+  PARTIAL
+  OVERDUE
 }
 
 enum NotificationType {

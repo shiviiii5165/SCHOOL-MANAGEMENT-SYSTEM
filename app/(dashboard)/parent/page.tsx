@@ -43,7 +43,14 @@ export default async function ParentDashboard() {
     const childrenData = parentData.students.map((student) => {
         let pendingFees = 0;
         const upcomingFees: any[] = [];
+        let unpaidFineCount = 0;
+        let unpaidFineTotal = 0;
+
         student.feeRecords?.forEach(record => {
+          if (record.feeType === "DISCIPLINE_FINE" && record.status !== "PAID" && record.status !== "WAIVED") {
+            unpaidFineCount++;
+            unpaidFineTotal += (record.amount - record.paidAmount);
+          }
           const now = new Date();
           const dueDate = new Date(record.dueDate);
           
@@ -87,7 +94,9 @@ export default async function ParentDashboard() {
         isSuspended: student.isSuspended,
         suspendedUntil: student.suspendedUntil ? student.suspendedUntil.toISOString() : null,
         suspendedReason: student.suspendedReason,
-        pendingFees
+        pendingFees,
+        unpaidFineCount,
+        unpaidFineTotal
       };
     });
 

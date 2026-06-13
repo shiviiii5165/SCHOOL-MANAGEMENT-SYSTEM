@@ -35,14 +35,23 @@ export const DisciplineReportSchema = z.object({
 })
 
 // Discipline action
+const baseFineFields = {
+  imposeFine:   z.boolean().optional(),
+  fineAmount:   z.number().positive().max(50000).optional(),
+  fineReason:   z.string().min(5).max(500).optional(),
+  fineDueDate:  z.string().datetime().optional(),
+}
+
 export const DisciplineActionSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('DISMISS') }),
-  z.object({ action: z.literal('WARNING'), warningNote: z.string().min(5).max(500) }),
+  z.object({ action: z.literal('WARNING'), warningNote: z.string().min(5).max(500), ...baseFineFields }),
+  z.object({ action: z.literal('FINE_ONLY'), ...baseFineFields }),
   z.object({
     action:         z.literal('SUSPENSION'),
     suspendedFrom:  z.string().datetime(),
     suspendedUntil: z.string().datetime(),
     reason:         z.string().min(5).max(500),
+    ...baseFineFields
   }),
 ])
 

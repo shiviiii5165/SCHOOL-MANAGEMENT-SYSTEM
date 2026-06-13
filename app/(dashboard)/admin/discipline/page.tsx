@@ -18,6 +18,12 @@ interface DisciplineReport {
   description: string;
   adminNote?: string;
   actionTaken?: string;
+  priorCount?: number;
+  fineStatus?: string | null;
+  fineAmount?: number | null;
+  fineDueDate?: string | null;
+  finePaidAt?: string | null;
+  feeRecordId?: string | null;
 }
 
 export default function AdminDisciplinePage() {
@@ -25,7 +31,12 @@ export default function AdminDisciplinePage() {
   const [selectedReport, setSelectedReport] = useState<DisciplineReport | null>(null);
   const [adminNote, setAdminNote] = useState("");
   const [durationDays, setDurationDays] = useState(1);
-  const [showToast, setShowToast] = useState<{show: boolean, type: "review" | "suspend" | "dismiss" | "warning" | "lift", message?: string}>({show: false, type: "review"});
+  const [selectedAction, setSelectedAction] = useState<"DISMISSED" | "WARNING" | "SUSPENSION" | "FINE_ONLY" | "">("");
+  const [imposeFine, setImposeFine] = useState(false);
+  const [fineAmount, setFineAmount] = useState<number | "">("");
+  const [fineReason, setFineReason] = useState("");
+  const [fineDueDate, setFineDueDate] = useState<string>("");
+  const [showToast, setShowToast] = useState<{show: boolean, type: "review" | "suspend" | "dismiss" | "warning" | "lift" | "fine", message?: string}>({show: false, type: "review"});
 
   // Fetch reports with auto-polling every 5 seconds
   const { data, isLoading } = useQuery({
@@ -41,13 +52,14 @@ export default function AdminDisciplinePage() {
   const reports: DisciplineReport[] = data?.reports || [];
   const pendingCount = reports.filter(r => r.status === "PENDING").length;
 
-  // Review mutation (dismiss / warning)
+  // Review mutation (dismiss / warning / fine only)
   const reviewMutation = useMutation({
-    mutationFn: async ({ id, action, note }: { id: string; action: string; note: string }) => {
+    mutationFn: async (payload: any) => {
+      const { id, ...data } = payload;
       const res = await fetch(`/api/discipline/reports/${id}/review`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, adminNote: note }),
+        body: JSON.stringify(data),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -58,15 +70,16 @@ export default function AdminDisciplinePage() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["discipline-reports"] });
       setSelectedReport(null);
-      setAdminNote("");
-      const type = variables.action === "DISMISSED" ? "dismiss" : variables.action === "RESOLVED_WARNING" ? "warning" : "review";
-      setShowToast({ show: true, type });
+      resetModalState();
+      const type = variables.action === "DISMISSED" ? "dismiss" : variables.action === "RESOLVED_WARNING" || variables.action === "WARNING_WITH_FINE" ? "warning" : variables.action === "FINE_ONLY" ? "fine" : "review";
+      setShowToast({ show: true, type, message: variables.action === "FINE_ONLY" ? "Fine Imposed Successfully" : undefined });
       setTimeout(() => setShowToast({ show: false, type: "review" }), 4000);
     },
   });
 
   const suspendMutation = useMutation({
-    mutationFn: async ({ id, note, durationDays }: { id: string; note: string; durationDays: number }) => {
+    mutationFn: async (payload: any) => {
+      const { id, note, durationDays, imposeFine, fineAmount, fineReason, fineDueDate } = payload;
       const from = new Date();
       const until = new Date();
       until.setDate(until.getDate() + durationDays);
@@ -77,7 +90,8 @@ export default function AdminDisciplinePage() {
           action: "SUSPENSION", 
           suspendedFrom: from.toISOString(), 
           suspendedUntil: until.toISOString(), 
-          reason: note 
+          reason: note,
+          imposeFine, fineAmount, fineReason, fineDueDate
         }),
       });
       if (!res.ok) {
@@ -89,8 +103,7 @@ export default function AdminDisciplinePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["discipline-reports"] });
       setSelectedReport(null);
-      setAdminNote("");
-      setDurationDays(1);
+      resetModalState();
       setShowToast({ show: true, type: "suspend" });
       setTimeout(() => setShowToast({ show: false, type: "review" }), 4000);
     },
@@ -117,7 +130,79 @@ export default function AdminDisciplinePage() {
     },
   });
 
-  const isProcessing = reviewMutation.isPending || suspendMutation.isPending || liftMutation.isPending;
+  const retroactiveFineMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const { id, ...data } = payload;
+      const res = await fetch(`/api/discipline/reports/${id}/fine`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || "Failed fine action");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discipline-reports"] });
+      setSelectedReport(null);
+      resetModalState();
+      setShowToast({ show: true, type: "fine", message: "Fine Action Completed Successfully" });
+      setTimeout(() => setShowToast({ show: false, type: "review" }), 4000);
+    }
+  });
+
+  const isProcessing = reviewMutation.isPending || suspendMutation.isPending || liftMutation.isPending || retroactiveFineMutation.isPending;
+
+  const resetModalState = () => {
+    setAdminNote("");
+    setDurationDays(1);
+    setSelectedAction("");
+    setImposeFine(false);
+    setFineAmount("");
+    setFineReason("");
+    setFineDueDate("");
+  };
+
+  const computeSuggestedFine = (report: DisciplineReport) => {
+    const priorCount = report.priorCount || 0;
+    const cat = report.category.toUpperCase();
+    let amt = 500;
+    let rank = priorCount === 0 ? "first" : "repeat";
+    
+    if (cat.includes("BEHAVIOR") || cat.includes("ABUSIVE") || cat.includes("FIGHTING") || cat.includes("BULLYING")) {
+      amt = priorCount === 0 ? 500 : (priorCount >= 2 ? 2000 : 1000);
+      if (priorCount >= 2) rank = "severe";
+    } else if (cat.includes("CHEAT") || cat.includes("ACADEMIC")) {
+      amt = 1500;
+    } else if (cat.includes("ATTENDANCE") || cat.includes("BUNK")) {
+      amt = priorCount >= 3 ? 500 : 200;
+      if (priorCount >= 3) rank = "repeated";
+    } else if (cat.includes("MOBILE") || cat.includes("DEVICE")) {
+      amt = priorCount === 0 ? 300 : 750;
+    } else if (cat.includes("VANDALISM") || cat.includes("DAMAGE")) {
+      amt = 1000;
+    }
+
+    return {
+      amount: amt,
+      suggestionText: `💡 Suggested: ₹${amt} for ${rank} ${cat} offense (Student has ${priorCount} prior report${priorCount!==1?'s':''} in this category)`
+    };
+  };
+
+  const handleOpenModal = (item: DisciplineReport) => {
+    resetModalState();
+    setSelectedReport(item);
+    if (item.status === "PENDING") {
+      const sug = computeSuggestedFine(item);
+      setFineAmount(sug.amount);
+      const d = new Date();
+      d.setDate(d.getDate() + 15);
+      setFineDueDate(d.toISOString().split("T")[0]);
+      setFineReason(`${item.category} Fine - ${item.description.substring(0, 50)}...`);
+    }
+  };
 
   const columns = [
     {
@@ -154,6 +239,28 @@ export default function AdminDisciplinePage() {
       header: "Date",
       accessorKey: "date",
       cell: (item: any) => <span className="text-sm text-text-secondary" suppressHydrationWarning>{formatDateTime(item.date)}</span>
+    },
+    {
+      header: "Fine",
+      accessorKey: "fineStatus",
+      cell: (item: any) => {
+        if (!item.fineStatus) return <span className="text-text-muted text-sm">—</span>;
+        
+        const styles: Record<string, string> = {
+          PENDING: "bg-orange-100 text-orange-700",
+          PAID: "bg-green-100 text-green-700",
+          OVERDUE: "bg-red-100 text-red-700",
+          WAIVED: "bg-gray-100 text-gray-500",
+        };
+        
+        const text = item.fineStatus === "WAIVED" ? "WAIVED" : `₹${item.fineAmount} ${item.fineStatus}`;
+        
+        return (
+          <span className={`px-2 py-1 text-xs font-bold rounded-md uppercase tracking-wider ${styles[item.fineStatus] || "bg-background text-text-muted"}`}>
+            {text}
+          </span>
+        );
+      }
     },
     {
       header: "Status",
@@ -233,7 +340,7 @@ export default function AdminDisciplinePage() {
           emptyStateIcon={ShieldAlert}
           emptyStateTitle="No discipline records"
           emptyStateDesc="There are no incident reports to display."
-          onView={(item) => setSelectedReport(item)}
+          onView={(item) => handleOpenModal(item)}
         />
       )}
 
@@ -256,7 +363,7 @@ export default function AdminDisciplinePage() {
                   <p className="text-sm text-text-secondary" suppressHydrationWarning>Reported on {formatDate(selectedReport.date)}</p>
                 </div>
               </div>
-              <button onClick={() => { setSelectedReport(null); setDurationDays(1); }} className="p-2 hover:bg-background rounded-full transition-colors">
+              <button onClick={() => { setSelectedReport(null); resetModalState(); }} className="p-2 hover:bg-black/5 rounded-full transition-colors">
                 <XCircle className="w-6 h-6 text-text-muted" />
               </button>
             </div>
@@ -313,122 +420,217 @@ export default function AdminDisciplinePage() {
                 </div>
               )}
 
-              {/* Admin Action Form (only if pending) */}
+                  {/* Admin Action Form (only if pending) */}
               {selectedReport.status === "PENDING" && (
                 <div>
-                  <h4 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-3">Admin Action</h4>
-                  <textarea
-                    value={adminNote}
-                    onChange={(e) => setAdminNote(e.target.value)}
-                    placeholder="Enter official remarks or action taken..."
-                    rows={4}
-                    className="w-full p-3 border border-border rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none bg-surface mb-4"
-                  />
+                  <h4 className="text-sm font-semibold text-text-primary uppercase tracking-wider mb-3">Admin Decision</h4>
                   
-                  {/* Suspension Inputs */}
-                  <div className="bg-background border border-border rounded-xl p-4 flex flex-col gap-4">
-                    <div>
-                      <label className="text-sm font-bold text-text-primary mb-1 block">Suspension Duration (Days)</label>
-                      <input 
-                        type="number" 
-                        min="1" 
-                        max="365"
-                        value={durationDays} 
-                        onChange={(e) => setDurationDays(parseInt(e.target.value) || 1)}
-                        className="w-full sm:w-32 p-2 border border-border rounded-lg text-sm focus:outline-none focus:border-primary"
-                      />
-                      <p className="text-xs text-text-muted mt-1">If suspending, this duration will be used to automatically unblock attendance later.</p>
+                  <div className="bg-surface border border-border rounded-xl p-4 mb-6">
+                    <p className="text-sm font-bold text-text-primary mb-3">Step 1 — Choose Action</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {["DISMISSED", "WARNING", "SUSPENSION", "FINE_ONLY"].map((act) => (
+                        <button
+                          key={act}
+                          onClick={() => { setSelectedAction(act as any); if (act === "FINE_ONLY") setImposeFine(true); else if (act === "DISMISSED") setImposeFine(false); }}
+                          className={`p-3 rounded-lg border text-sm font-medium transition-colors ${selectedAction === act ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-text-secondary hover:border-primary/50"}`}
+                        >
+                          {act === "DISMISSED" ? "Dismiss" : act === "WARNING" ? "Warning" : act === "SUSPENSION" ? "Suspend" : "Fine Only"}
+                          {act === "DISMISSED" && <span className="block text-xs font-normal opacity-80 mt-1">(no fine)</span>}
+                        </button>
+                      ))}
                     </div>
+
+                    {selectedAction === "SUSPENSION" && (
+                      <div className="mt-4 pt-4 border-t border-border">
+                        <label className="text-sm font-bold text-text-primary mb-2 block">Suspension Duration (Days)</label>
+                        <input 
+                          type="number" min="1" max="365"
+                          value={durationDays} 
+                          onChange={(e) => setDurationDays(parseInt(e.target.value) || 1)}
+                          className="w-full sm:w-32 p-2 border border-border rounded-lg text-sm focus:outline-none focus:border-primary bg-background"
+                        />
+                      </div>
+                    )}
                   </div>
-                  
-                  {/* Suspension Warning */}
-                  <div className="mt-4 bg-status-danger-bg border border-status-danger/20 rounded-lg p-4 flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-status-danger shrink-0 mt-0.5" />
-                    <div>
-                      <h5 className="text-sm font-bold text-status-danger-text">Suspension Action</h5>
-                      <p className="text-xs text-status-danger-text/80 mt-1 leading-relaxed">
-                        Issuing a suspension will automatically activate the <strong>Suspension Chain</strong>. The student will be blocked from the attendance system and their portal access will be restricted for the specified duration.
-                      </p>
-                    </div>
+
+                  <div className={`bg-surface border border-border rounded-xl p-4 mb-6 transition-opacity ${selectedAction === "DISMISSED" ? "opacity-50 pointer-events-none" : ""}`}>
+                    <p className="text-sm font-bold text-text-primary mb-3">Step 2 — Impose Fine? <span className="font-normal text-text-secondary text-xs">(optional for Warning/Suspend, required for Fine Only)</span></p>
+                    
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={imposeFine}
+                        onChange={(e) => setImposeFine(e.target.checked)}
+                        disabled={selectedAction === "FINE_ONLY"}
+                        className="w-5 h-5 rounded border-border text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm font-medium text-text-primary">Add Monetary Fine</span>
+                    </label>
+
+                    {imposeFine && (
+                      <div className="mt-4 pt-4 border-t border-border space-y-4">
+                        <div className="bg-status-success-bg/30 border border-status-success/20 p-3 rounded-lg text-sm text-status-success-text flex items-start gap-2">
+                          <span className="text-lg leading-none">💡</span>
+                          <span dangerouslySetInnerHTML={{__html: computeSuggestedFine(selectedReport).suggestionText.replace('💡 ', '')}} />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-xs font-bold text-text-secondary mb-1 block">Fine Amount (₹)</label>
+                            <input 
+                              type="number" min="1"
+                              value={fineAmount} onChange={(e) => setFineAmount(parseInt(e.target.value) || "")}
+                              className="w-full p-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:border-primary"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-text-secondary mb-1 block">Due Date</label>
+                            <input 
+                              type="date"
+                              value={fineDueDate} onChange={(e) => setFineDueDate(e.target.value)}
+                              className="w-full p-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:border-primary"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs font-bold text-text-secondary mb-1 block">Fine Reason (appears on invoice)</label>
+                          <input 
+                            type="text"
+                            value={fineReason} onChange={(e) => setFineReason(e.target.value)}
+                            className="w-full p-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:border-primary"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-surface border border-border rounded-xl p-4">
+                    <label className="text-sm font-bold text-text-primary mb-2 block">Admin Note (Required)</label>
+                    <textarea
+                      value={adminNote}
+                      onChange={(e) => setAdminNote(e.target.value)}
+                      placeholder="Type reason for decision..."
+                      rows={3}
+                      className="w-full p-3 border border-border rounded-lg text-sm focus:outline-none focus:border-primary bg-background resize-none"
+                    />
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Footer Actions */}
+            {/* Footer Actions for Pending */}
             {selectedReport.status === "PENDING" && (
-              <div className="p-6 border-t border-border bg-background flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+              <div className="p-6 border-t border-border bg-background flex items-center justify-between gap-4">
+                <button
+                  onClick={() => setSelectedReport(null)}
+                  disabled={isProcessing}
+                  className="px-5 py-2.5 text-text-secondary font-medium hover:bg-border/50 rounded-lg transition-colors border border-border disabled:opacity-50"
+                >
+                  Cancel
+                </button>
                 <button
                   onClick={() => {
-                    reviewMutation.mutate({ id: selectedReport.id, action: "DISMISSED", note: adminNote || "Dismissed by admin." });
+                    if (!selectedAction || !adminNote) return;
+                    if (imposeFine && (!fineAmount || !fineReason || !fineDueDate)) return;
+
+                    const payload = {
+                      id: selectedReport.id,
+                      adminNote,
+                      imposeFine, fineAmount, fineReason, fineDueDate
+                    };
+
+                    if (selectedAction === "DISMISSED") {
+                      reviewMutation.mutate({ ...payload, action: "DISMISSED" });
+                    } else if (selectedAction === "WARNING") {
+                      reviewMutation.mutate({ ...payload, action: imposeFine ? "WARNING_WITH_FINE" : "RESOLVED_WARNING" });
+                    } else if (selectedAction === "FINE_ONLY") {
+                      reviewMutation.mutate({ ...payload, action: "FINE_ONLY" });
+                    } else if (selectedAction === "SUSPENSION") {
+                      suspendMutation.mutate({ ...payload, durationDays });
+                    }
                   }}
-                  disabled={isProcessing}
-                  className="w-full sm:w-auto px-5 py-3 text-text-secondary font-medium hover:bg-border/50 rounded-lg transition-colors border border-border disabled:opacity-50 flex items-center justify-center gap-2"
+                  disabled={!selectedAction || !adminNote || isProcessing || (imposeFine && (!fineAmount || !fineReason || !fineDueDate))}
+                  className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-6 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 shadow-sm"
                 >
-                  {reviewMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
-                  Dismiss
+                  {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Apply Decision →
                 </button>
-                <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-                  <button
-                    onClick={() => {
-                      if (!adminNote) return;
-                      reviewMutation.mutate({ id: selectedReport.id, action: "RESOLVED_WARNING", note: adminNote });
-                    }}
-                    disabled={!adminNote || isProcessing}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-surface border border-border hover:bg-background text-text-primary px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
-                  >
-                    {reviewMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
-                    Issue Warning
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!adminNote || durationDays < 1) return;
-                      suspendMutation.mutate({ id: selectedReport.id, note: adminNote, durationDays });
-                    }}
-                    disabled={!adminNote || durationDays < 1 || isProcessing}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-status-danger hover:bg-status-danger/90 text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 shadow-sm"
-                  >
-                    {suspendMutation.isPending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        Issue Suspension
-                        <Lock className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </div>
               </div>
             )}
             
-            {/* Footer Actions for Suspended Reports (Lifting Suspension) */}
-            {selectedReport.status === "SUSPENDED" && (
-              <div className="p-6 border-t border-border bg-background flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <p className="text-sm text-text-secondary">This student is currently suspended.</p>
-                <button
-                  onClick={() => {
-                    if (confirm("Are you sure you want to lift this suspension early? Attendance and portal access will be restored immediately.")) {
-                      liftMutation.mutate(selectedReport.id);
-                    }
-                  }}
-                  disabled={liftMutation.isPending}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-status-success hover:bg-status-success/90 text-white px-6 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 shadow-sm"
-                >
-                  {liftMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      Lift Suspension
-                      <Unlock className="w-4 h-4" />
-                    </>
+            {/* Footer Actions for ALREADY REVIEWED / SUSPENDED Reports */}
+            {selectedReport.status !== "PENDING" && (
+              <div className="p-6 border-t border-border bg-background flex flex-col gap-4">
+                {selectedReport.fineStatus && (
+                  <div className="bg-surface border border-border rounded-lg p-3 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-text-primary">
+                        Fine: ₹{selectedReport.fineAmount} — <span className={`font-bold ${selectedReport.fineStatus === "PENDING" ? "text-orange-600" : selectedReport.fineStatus === "PAID" ? "text-green-600" : selectedReport.fineStatus === "OVERDUE" ? "text-red-600" : "text-gray-500"}`}>{selectedReport.fineStatus}</span>
+                      </p>
+                      {selectedReport.fineDueDate && <p className="text-xs text-text-muted">Due {formatDate(selectedReport.fineDueDate)}</p>}
+                    </div>
+                    <div className="flex gap-2">
+                      {selectedReport.fineStatus === "PENDING" || selectedReport.fineStatus === "OVERDUE" ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              if(confirm("Waive this fine?")) retroactiveFineMutation.mutate({ id: selectedReport.id, action: "WAIVE" });
+                            }}
+                            disabled={isProcessing}
+                            className="px-3 py-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                          >
+                            Waive Fine
+                          </button>
+                          <button
+                            onClick={() => {
+                              if(confirm("Record offline cash/cheque payment for this fine?")) retroactiveFineMutation.mutate({ id: selectedReport.id, action: "MARK_PAID" });
+                            }}
+                            disabled={isProcessing}
+                            className="px-3 py-1.5 text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded transition-colors"
+                          >
+                            Mark Fine Paid
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-end gap-3">
+                  {!selectedReport.fineStatus && (
+                    <button
+                      onClick={() => {
+                        const amt = prompt("Enter Fine Amount (₹):", "500");
+                        if (!amt) return;
+                        const reason = prompt("Enter Fine Reason:", `${selectedReport.category} Fine`);
+                        if (!reason) return;
+                        const d = new Date(); d.setDate(d.getDate() + 15);
+                        const dueDate = prompt("Enter Due Date (YYYY-MM-DD):", d.toISOString().split('T')[0]);
+                        if (!dueDate) return;
+                        retroactiveFineMutation.mutate({ id: selectedReport.id, action: "ADD", fineAmount: parseInt(amt), fineReason: reason, fineDueDate: dueDate });
+                      }}
+                      disabled={isProcessing}
+                      className="px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors"
+                    >
+                      Add Fine Now
+                    </button>
                   )}
-                </button>
+
+                  {selectedReport.status === "SUSPENDED" && (
+                    <button
+                      onClick={() => {
+                        if (confirm("Are you sure you want to lift this suspension early?")) {
+                          liftMutation.mutate(selectedReport.id);
+                        }
+                      }}
+                      disabled={isProcessing}
+                      className="flex items-center gap-2 bg-status-success hover:bg-status-success/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                    >
+                      {liftMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />}
+                      Lift Suspension
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>

@@ -47,9 +47,38 @@ export async function PATCH(
     const fromDate = new Date((data as any).suspendedFrom);
     const untilDate = new Date((data as any).suspendedUntil);
     const adminNote = (data as any).reason;
+    const { imposeFine, fineAmount, fineReason, fineDueDate } = data as any;
 
-    const [updatedReport, updatedStudent] = await prisma.$transaction([
-      prisma.disciplineReport.update({
+    const now = new Date();
+    let updatedReport, updatedStudent;
+    const invoiceNo = `FINE-${now.getFullYear()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+    await prisma.$transaction(async (tx) => {
+      let feeRecordId = null;
+
+      if (imposeFine && fineAmount && fineDueDate) {
+        const feeRecord = await tx.feeRecord.create({
+          data: {
+            studentId: report.studentId,
+            feeType: "DISCIPLINE_FINE",
+            amount: parseFloat(fineAmount),
+            dueDate: new Date(fineDueDate),
+            status: "UNPAID",
+            invoiceId: invoiceNo,
+          },
+        });
+        feeRecordId = feeRecord.id;
+      }
+
+      const fineData = feeRecordId ? {
+        fineAmount: parseFloat(fineAmount),
+        fineReason,
+        fineDueDate: new Date(fineDueDate),
+        fineStatus: "PENDING" as any,
+        feeRecordId,
+      } : {};
+
+      updatedReport = await tx.disciplineReport.update({
         where: { id },
         data: {
           status: "SUSPENDED",
@@ -57,12 +86,14 @@ export async function PATCH(
           reviewedBy: session.user.id,
           reviewedAt: new Date(),
           actionTaken: "SUSPENDED",
-          actionType: "SUSPENSION",
+          actionType: imposeFine ? "SUSPENDED_WITH_FINE" : "SUSPENSION",
           suspendedFrom: fromDate,
           suspendedUntil: untilDate,
+          ...fineData
         },
-      }),
-      prisma.student.update({
+      });
+
+      updatedStudent = await tx.student.update({
         where: { id: report.studentId },
         data: {
           isSuspended: true,
@@ -71,8 +102,8 @@ export async function PATCH(
           suspendedFrom: fromDate,
           suspendedUntil: untilDate,
         },
-      }),
-    ]);
+      });
+    });
 
     const formatDate = (date: Date) => date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
     
@@ -86,27 +117,33 @@ export async function PATCH(
     notifications.push({
       userId: report.teacher.userId,
       title: "Action Taken: Student Suspended",
-      message: `Student ${report.student.user.name} has been suspended based on your report (${report.category}).${details}`,
+      message: `✅ Action taken on your report for ${report.student.user.name}: Suspension ${imposeFine ? `+ Fine of ₹${fineAmount}` : ''} imposed.`,
       type: "DISCIPLINE" as "DISCIPLINE",
       link: "/teacher/discipline"
     });
 
     // Student notification
+    let studentMsg = `You have been suspended. Your attendance and portal access are blocked.${details}`;
+    if (imposeFine) studentMsg += `\n⚠ Disciplinary fine of ₹${fineAmount} imposed for ${fineReason}. Due by ${new Date(fineDueDate).toLocaleDateString()}. Contact admin for queries.`;
+    
     notifications.push({
       userId: report.student.userId,
       title: "🚫 Account Suspended",
-      message: `You have been suspended. Your attendance and portal access are blocked.${details}`,
+      message: studentMsg,
       type: "DISCIPLINE" as "DISCIPLINE",
       link: "/student"
     });
 
     // Parent notification (if linked)
     if (report.student.parent?.userId) {
+      let parentMsg = `Your child ${report.student.user.name} has been suspended. Please contact the administration.${details}`;
+      if (imposeFine) parentMsg = `⚠ A fine of ₹${fineAmount} has been imposed on ${report.student.user.name} (${report.student.rollNo}) for ${fineReason}. Due by ${new Date(fineDueDate).toLocaleDateString()}. Pay via the Fee Portal.\n` + parentMsg;
+
       notifications.push({
         userId: report.student.parent.userId,
         title: "🚫 Your Child Has Been Suspended",
-        message: `Your child ${report.student.user.name} has been suspended. Please contact the administration.${details}`,
-        type: "DISCIPLINE" as "DISCIPLINE",
+        message: parentMsg,
+        type: imposeFine ? ("FEE" as any) : ("DISCIPLINE" as "DISCIPLINE"),
         link: "/parent"
       });
     }

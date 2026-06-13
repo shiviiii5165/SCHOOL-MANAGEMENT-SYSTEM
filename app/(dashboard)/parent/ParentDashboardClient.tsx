@@ -15,6 +15,8 @@ type ChildData = {
   suspendedUntil?: string | null;
   suspendedReason?: string | null;
   pendingFees?: number;
+  unpaidFineCount?: number;
+  unpaidFineTotal?: number;
   recentGrades?: { subject: string, grade: string }[];
   upcomingFees?: { type: string, title: string, statusText: string, isOverdue: boolean }[];
 };
@@ -57,6 +59,27 @@ export default function ParentDashboardClient({ childrenData, parentName, newNot
           </div>
         </div>
       </div>
+
+      {/* UNPAID FINES BANNER */}
+      {(selectedChild.unpaidFineCount || 0) > 0 && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-orange-50 border border-orange-200 rounded-xl mb-4">
+          <div className="flex gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+              <span className="text-xl">💰</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-orange-800">Unpaid Disciplinary Fines</p>
+              <p className="text-sm text-orange-700 mt-0.5">
+                {selectedChild.name} has {selectedChild.unpaidFineCount} unpaid fine(s) totaling <strong>₹{selectedChild.unpaidFineTotal}</strong>.
+              </p>
+              <p className="text-xs text-orange-600/80 mt-1">Please pay via the Fees Portal before the due date.</p>
+            </div>
+          </div>
+          <Link href="/parent/fees" className="shrink-0 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg transition-colors">
+            Pay Fines →
+          </Link>
+        </div>
+      )}
 
       {/* SUSPENSION BANNER */}
       {selectedChild.isSuspended && (

@@ -14,14 +14,25 @@ export default async function StudentDashboard() {
   }
 
   let student: any = null;
+  let unpaidFines: any[] = [];
   try {
     student = await prisma.student.findUnique({
       where: { userId: session.user.id },
       include: { user: true }
     });
+
+    if (student) {
+      unpaidFines = await prisma.disciplineReport.findMany({
+        where: {
+          studentId: student.id,
+          fineStatus: { in: ["PENDING", "OVERDUE"] }
+        },
+        orderBy: { fineDueDate: "asc" }
+      });
+    }
   } catch (error) {
     console.error("Student dashboard error:", error);
   }
 
-  return <StudentDashboardClient student={student} />;
+  return <StudentDashboardClient student={student} unpaidFines={unpaidFines} />;
 }

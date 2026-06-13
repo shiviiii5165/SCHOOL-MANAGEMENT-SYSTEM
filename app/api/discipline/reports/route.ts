@@ -129,18 +129,37 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    const formatted = reports.map((r) => ({
-      id: r.id,
-      studentName: r.student.user.name,
-      rollNo: r.student.rollNo,
-      className: `${r.student.class.name} - ${r.student.class.section}`,
-      reportedBy: r.teacher.user.name,
-      category: r.category,
-      date: r.createdAt.toISOString(),
-      status: r.status,
-      description: r.description,
-      adminNote: r.adminNote,
-      actionTaken: r.actionTaken,
+    const formatted = await Promise.all(reports.map(async (r) => {
+      const priorCount = await prisma.disciplineReport.count({
+        where: {
+          studentId: r.studentId,
+          category: r.category,
+          status: { not: "DISMISSED" },
+          id: { not: r.id },
+        },
+      });
+
+      return {
+        id: r.id,
+        studentId: r.studentId,
+        studentName: r.student.user.name,
+        rollNo: r.student.rollNo,
+        className: `${r.student.class.name} - ${r.student.class.section}`,
+        reportedBy: r.teacher.user.name,
+        category: r.category,
+        date: r.createdAt.toISOString(),
+        status: r.status,
+        description: r.description,
+        adminNote: r.adminNote,
+        actionTaken: r.actionTaken,
+        priorCount,
+        fineStatus: r.fineStatus,
+        fineAmount: r.fineAmount,
+        fineDueDate: r.fineDueDate ? r.fineDueDate.toISOString() : null,
+        finePaidAt: r.finePaidAt ? r.finePaidAt.toISOString() : null,
+        finePaidAmount: r.finePaidAmount,
+        feeRecordId: r.feeRecordId,
+      };
     }));
 
     return NextResponse.json({ reports: formatted });

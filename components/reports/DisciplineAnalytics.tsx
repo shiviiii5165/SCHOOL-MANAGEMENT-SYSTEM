@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { Loader2, ShieldAlert, AlertTriangle, UserX, Clock } from "lucide-react";
+import { Loader2, ShieldAlert, AlertTriangle, UserX, Clock, IndianRupee } from "lucide-react";
 import MetricCard from "@/components/dashboard/MetricCard";
 
 interface DisciplineAnalyticsProps {
@@ -60,7 +60,7 @@ export default function DisciplineAnalytics({ data, isLoading }: DisciplineAnaly
   return (
     <div className="space-y-6">
       {/* 4 Mini Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <MetricCard
           title="Total Incidents (Month)"
           value={34}
@@ -84,6 +84,12 @@ export default function DisciplineAnalytics({ data, isLoading }: DisciplineAnaly
           value="Late Arrival"
           icon={<AlertTriangle className="w-5 h-5 text-role-teacher" />}
           iconBg="bg-role-teacher/10"
+        />
+        <MetricCard
+          title="Fines Collected (Month)"
+          value="₹12,500"
+          icon={<IndianRupee className="w-5 h-5 text-status-success-text" />}
+          iconBg="bg-status-success-bg"
         />
       </div>
 

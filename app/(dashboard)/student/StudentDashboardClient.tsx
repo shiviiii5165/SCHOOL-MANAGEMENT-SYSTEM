@@ -6,9 +6,29 @@ import Link from "next/link";
 
 const formatDate = (date: Date | null) => date ? new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
 
-export default function StudentDashboardClient({ student }: { student: any }) {
+export default function StudentDashboardClient({ student, unpaidFines = [] }: { student: any, unpaidFines?: any[] }) {
   return (
     <div className="space-y-6">
+      {/* UNPAID FINES BANNER */}
+      {unpaidFines.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-orange-50 border border-orange-200 rounded-xl mb-6">
+          <div className="flex gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+              <span className="text-xl">💰</span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-orange-800">Unpaid Disciplinary Fines</p>
+              <p className="text-sm text-orange-700 mt-0.5">
+                You have {unpaidFines.length} unpaid fine(s) totaling <strong>₹{unpaidFines.reduce((sum, f) => sum + (f.fineAmount || 0), 0)}</strong>.
+              </p>
+              <p className="text-xs text-orange-600/80 mt-1">Please pay before the due date to avoid further restrictions.</p>
+            </div>
+          </div>
+          <Link href="/student/fees" className="shrink-0 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold rounded-lg transition-colors">
+            Pay Now →
+          </Link>
+        </div>
+      )}
       {/* SUSPENSION BANNER */}
       {student?.isSuspended && (
         <div className="flex gap-3 p-4 bg-danger-bg border border-danger/20 rounded-xl mb-6">
