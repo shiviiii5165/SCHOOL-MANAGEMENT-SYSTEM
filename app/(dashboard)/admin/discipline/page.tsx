@@ -55,11 +55,21 @@ export default function AdminDisciplinePage() {
   // Review mutation (dismiss / warning / fine only)
   const reviewMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const { id, ...data } = payload;
+      const { id, action, adminNote, imposeFine, fineAmount, fineReason, fineDueDate } = payload;
+      
+      const formattedData = {
+        action,
+        adminNote,
+        imposeFine,
+        fineAmount: fineAmount ? Number(fineAmount) : undefined,
+        fineReason: fineReason || undefined,
+        fineDueDate: fineDueDate ? new Date(fineDueDate).toISOString() : undefined,
+      };
+
       const res = await fetch(`/api/discipline/reports/${id}/review`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(formattedData),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -75,24 +85,33 @@ export default function AdminDisciplinePage() {
       setShowToast({ show: true, type, message: variables.action === "FINE_ONLY" ? "Fine Imposed Successfully" : undefined });
       setTimeout(() => setShowToast({ show: false, type: "review" }), 4000);
     },
+    onError: (error: any) => {
+      alert(error.message);
+    }
   });
 
   const suspendMutation = useMutation({
     mutationFn: async (payload: any) => {
-      const { id, note, durationDays, imposeFine, fineAmount, fineReason, fineDueDate } = payload;
+      const { id, adminNote, durationDays, imposeFine, fineAmount, fineReason, fineDueDate } = payload;
       const from = new Date();
       const until = new Date();
       until.setDate(until.getDate() + durationDays);
+      
+      const formattedData = {
+        action: "SUSPENSION",
+        suspendedFrom: from.toISOString(),
+        suspendedUntil: until.toISOString(),
+        reason: adminNote,
+        imposeFine,
+        fineAmount: fineAmount ? Number(fineAmount) : undefined,
+        fineReason: fineReason || undefined,
+        fineDueDate: fineDueDate ? new Date(fineDueDate).toISOString() : undefined,
+      };
+
       const res = await fetch(`/api/discipline/reports/${id}/suspend`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          action: "SUSPENSION", 
-          suspendedFrom: from.toISOString(), 
-          suspendedUntil: until.toISOString(), 
-          reason: note,
-          imposeFine, fineAmount, fineReason, fineDueDate
-        }),
+        body: JSON.stringify(formattedData),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -107,6 +126,9 @@ export default function AdminDisciplinePage() {
       setShowToast({ show: true, type: "suspend" });
       setTimeout(() => setShowToast({ show: false, type: "review" }), 4000);
     },
+    onError: (error: any) => {
+      alert(error.message);
+    }
   });
 
   // Lift Suspension mutation
@@ -128,15 +150,24 @@ export default function AdminDisciplinePage() {
       setShowToast({ show: true, type: "lift" });
       setTimeout(() => setShowToast({ show: false, type: "review" }), 4000);
     },
+    onError: (error: any) => {
+      alert(error.message);
+    }
   });
 
   const retroactiveFineMutation = useMutation({
     mutationFn: async (payload: any) => {
       const { id, ...data } = payload;
+      const formattedData = {
+        ...data,
+        fineAmount: data.fineAmount ? Number(data.fineAmount) : undefined,
+        fineDueDate: data.fineDueDate ? new Date(data.fineDueDate).toISOString() : undefined,
+      };
+      
       const res = await fetch(`/api/discipline/reports/${id}/fine`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(formattedData),
       });
       if (!res.ok) {
         const d = await res.json();
@@ -150,6 +181,9 @@ export default function AdminDisciplinePage() {
       resetModalState();
       setShowToast({ show: true, type: "fine", message: "Fine Action Completed Successfully" });
       setTimeout(() => setShowToast({ show: false, type: "review" }), 4000);
+    },
+    onError: (error: any) => {
+      alert(error.message);
     }
   });
 
