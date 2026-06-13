@@ -40,8 +40,8 @@ export default function AdminFeesClient({ data, stats, defaulters, recentPayment
 
   useEffect(() => {
     const newPaid = data.filter(d => 
-      d.status === 'PAID' && 
-      prevDataRef.current.find((p: any) => p.id === d.id)?.status !== 'PAID'
+      d.paidAmount > 0 && 
+      prevDataRef.current.find((p: any) => p.id === d.id)?.paidAmount !== d.paidAmount
     );
     if (newPaid.length > 0) {
       setNewlyPaidIds(prev => {
@@ -71,10 +71,10 @@ export default function AdminFeesClient({ data, stats, defaulters, recentPayment
       if (quickFilter === 'UNPAID') return item.status === 'UNPAID';
       if (quickFilter === 'OVERDUE') return item.status === 'OVERDUE';
       if (quickFilter === 'PAID_TODAY') {
-        if (item.status !== 'PAID' || !item.paidDate) return false;
+        if (!item.lastPaymentAt) return false;
         const today = new Date().toISOString().split('T')[0];
-        const paidDate = new Date(item.paidDate).toISOString().split('T')[0];
-        return today === paidDate;
+        const lastPaymentDate = new Date(item.lastPaymentAt).toISOString().split('T')[0];
+        return today === lastPaymentDate;
       }
       return true;
     });

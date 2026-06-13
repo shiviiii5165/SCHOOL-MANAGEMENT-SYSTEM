@@ -61,7 +61,8 @@ export default async function AdminFeesPage() {
       feeType: fee.feeType,
       dueDate: fee.dueDate,
       status: fee.dynamicStatus,
-      paidDate: fee.paidDate
+      paidDate: fee.paidDate,
+      lastPaymentAt: fee.lastPaymentAt
     };
   });
 
