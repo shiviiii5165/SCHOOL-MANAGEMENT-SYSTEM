@@ -117,8 +117,8 @@ export const ChatWidget = () => {
       {isOpen && (
         <div className="mb-4 w-96 h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
           <div className="bg-primary text-white p-4 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Image src="/educore-bot.png" alt="EduCore AI" width={28} height={28} className="object-contain drop-shadow-md bg-white rounded-full p-[2px]" />
+            <div className="flex items-center gap-3">
+              <Image src="/educore-bot.png" alt="EduCore AI" width={36} height={36} className="object-contain drop-shadow-lg" />
               <div>
                 <h3 className="font-semibold leading-tight">EduCore AI</h3>
                 {isLoading && <p className="text-[10px] text-white/80 animate-pulse">Typing...</p>}
@@ -200,9 +200,13 @@ export const ChatWidget = () => {
       {/* Floating Button */}
       <button
         onClick={toggleChat}
-        className="w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 hover:bg-primary/90 transition-all ml-auto border-2 border-white"
+        className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-all ml-auto ${
+          isOpen
+            ? 'bg-primary text-white border-2 border-white'
+            : 'bg-white border-2 border-gray-200 hover:shadow-xl'
+        }`}
       >
-        {isOpen ? <X size={24} /> : <Image src="/educore-bot.png" alt="Chat" width={32} height={32} className="object-contain" />}
+        {isOpen ? <X size={24} /> : <Image src="/educore-bot.png" alt="Chat" width={40} height={40} className="object-contain rounded-full" />}
       </button>
     </div>
   );

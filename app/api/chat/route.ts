@@ -53,10 +53,11 @@ export async function POST(req: Request) {
       system: systemPrompt,
       messages: recentMessages,
       tools,
+      maxSteps: 3,
       abortSignal: AbortSignal.timeout(25000),
     });
 
-    return result.toTextStreamResponse();
+    return result.toDataStreamResponse();
   } catch (error) {
     console.error('Chat API Error:', error);
     return new Response('Internal Server Error', { status: 500 });
