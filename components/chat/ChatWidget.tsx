@@ -4,6 +4,7 @@ import { useChatStore } from '@/store/chatStore';
 import { Bot, X, Send, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import Image from 'next/image';
 
 export const ChatWidget = () => {
   const { isOpen, toggleChat } = useChatStore();
@@ -40,6 +41,7 @@ export const ChatWidget = () => {
       
       let aiMessage = { id: (Date.now() + 1).toString(), role: 'assistant', content: '', toolInvocations: [] as any[] };
       setMessages([...newMessages, aiMessage]);
+      let isProtocolStream = false;
 
       if (reader) {
         while (true) {
@@ -47,37 +49,45 @@ export const ChatWidget = () => {
           if (done) break;
           
           const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
           
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            
-            try {
-              if (line.startsWith('0:')) {
-                const text = JSON.parse(line.substring(2));
-                aiMessage.content += text;
-              } else if (line.startsWith('9:')) {
-                const toolCall = JSON.parse(line.substring(2));
-                aiMessage.toolInvocations.push({
-                  state: 'call',
-                  toolCallId: toolCall.toolCallId,
-                  toolName: toolCall.toolName,
-                  args: toolCall.args
-                });
-              } else if (line.startsWith('a:')) {
-                const toolResult = JSON.parse(line.substring(2));
-                const invocation = aiMessage.toolInvocations.find(t => t.toolCallId === toolResult.toolCallId);
-                if (invocation) {
-                  invocation.state = 'result';
-                  invocation.result = toolResult.result;
-                }
-              }
-              
-              setMessages([...newMessages, { ...aiMessage }]);
-            } catch (err) {
-              console.warn('Failed to parse chunk:', line, err);
-            }
+          if (!isProtocolStream && (chunk.startsWith('0:') || chunk.startsWith('9:'))) {
+            isProtocolStream = true;
           }
+
+          if (isProtocolStream) {
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              try {
+                if (line.startsWith('0:')) {
+                  const text = JSON.parse(line.substring(2));
+                  aiMessage.content += text;
+                } else if (line.startsWith('9:')) {
+                  const toolCall = JSON.parse(line.substring(2));
+                  aiMessage.toolInvocations.push({
+                    state: 'call',
+                    toolCallId: toolCall.toolCallId,
+                    toolName: toolCall.toolName,
+                    args: toolCall.args
+                  });
+                } else if (line.startsWith('a:')) {
+                  const toolResult = JSON.parse(line.substring(2));
+                  const invocation = aiMessage.toolInvocations.find(t => t.toolCallId === toolResult.toolCallId);
+                  if (invocation) {
+                    invocation.state = 'result';
+                    invocation.result = toolResult.result;
+                  }
+                }
+              } catch (err) {
+                console.warn('Failed to parse chunk:', line, err);
+              }
+            }
+          } else {
+            // Pure text stream (toTextStreamResponse)
+            aiMessage.content += chunk;
+          }
+          
+          setMessages([...newMessages, { ...aiMessage }]);
         }
       }
     } catch (error) {
@@ -101,8 +111,11 @@ export const ChatWidget = () => {
         <div className="mb-4 w-96 h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
           <div className="bg-primary text-white p-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <Bot size={24} />
-              <h3 className="font-semibold">EduCore AI</h3>
+              <Image src="/educore-bot.png" alt="EduCore AI" width={28} height={28} className="object-contain drop-shadow-md bg-white rounded-full p-[2px]" />
+              <div>
+                <h3 className="font-semibold leading-tight">EduCore AI</h3>
+                {isLoading && <p className="text-[10px] text-white/80 animate-pulse">Typing...</p>}
+              </div>
             </div>
             <button onClick={toggleChat} className="hover:bg-primary/80 p-1 rounded-md">
               <X size={20} />
@@ -111,8 +124,8 @@ export const ChatWidget = () => {
           
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
             {messages.length === 0 ? (
-              <div className="text-center text-gray-500 my-auto">
-                <Bot size={48} className="mx-auto mb-2 opacity-50" />
+              <div className="text-center text-gray-500 my-auto flex flex-col items-center">
+                <Image src="/educore-bot.png" alt="EduCore AI" width={80} height={80} className="mb-4 object-contain drop-shadow-xl" />
                 <p>Hello! How can I help you today?</p>
               </div>
             ) : (
@@ -123,9 +136,20 @@ export const ChatWidget = () => {
                       ? 'bg-primary text-white rounded-tr-sm' 
                       : 'bg-gray-100 text-gray-800 rounded-tl-sm'
                   }`}>
-                    <ReactMarkdown>
-                      {m.content}
-                    </ReactMarkdown>
+                    {/* Render typing indicator if no content yet */}
+                    {m.role === 'assistant' && !m.content && m.toolInvocations?.length === 0 && (
+                      <div className="flex gap-1 items-center h-5 py-1">
+                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    )}
+                    <div className="prose prose-sm break-words">
+                      <ReactMarkdown>
+                        {m.content}
+                      </ReactMarkdown>
+                    </div>
+                    
                     {/* Render tool invocations */}
                     {m.toolInvocations?.map((toolInvocation: any) => (
                       <div key={toolInvocation.toolCallId} className="mt-2 text-xs opacity-75 bg-black/5 p-2 rounded">
@@ -169,9 +193,9 @@ export const ChatWidget = () => {
       {/* Floating Button */}
       <button
         onClick={toggleChat}
-        className="w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 hover:bg-primary/90 transition-all ml-auto"
+        className="w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:scale-105 hover:bg-primary/90 transition-all ml-auto border-2 border-white"
       >
-        {isOpen ? <X size={24} /> : <Bot size={24} />}
+        {isOpen ? <X size={24} /> : <Image src="/educore-bot.png" alt="Chat" width={32} height={32} className="object-contain" />}
       </button>
     </div>
   );
