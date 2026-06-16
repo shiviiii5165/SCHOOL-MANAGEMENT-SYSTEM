@@ -57,40 +57,39 @@ export const ChatWidget = () => {
           
           const chunk = decoder.decode(value, { stream: true });
           
-          if (!isProtocolStream && (chunk.startsWith('0:') || chunk.startsWith('9:'))) {
+          if (!isProtocolStream && chunk.includes('data: {"type":')) {
             isProtocolStream = true;
           }
 
           if (isProtocolStream) {
             const lines = chunk.split('\n');
             for (const line of lines) {
-              if (!line.trim()) continue;
+              if (!line.trim() || !line.startsWith('data: ')) continue;
+              if (line.trim() === 'data: [DONE]') continue;
               try {
-                if (line.startsWith('0:')) {
-                  const text = JSON.parse(line.substring(2));
-                  aiMessage.content += text;
-                } else if (line.startsWith('9:')) {
-                  const toolCall = JSON.parse(line.substring(2));
+                const event = JSON.parse(line.substring(6));
+                if (event.type === 'text-delta') {
+                  aiMessage.content += event.delta;
+                } else if (event.type === 'tool-call' || event.type === 'tool-input-start') {
                   aiMessage.toolInvocations.push({
                     state: 'call',
-                    toolCallId: toolCall.toolCallId,
-                    toolName: toolCall.toolName,
-                    args: toolCall.args
+                    toolCallId: event.toolCallId,
+                    toolName: event.toolName,
+                    args: event.args || {}
                   });
-                } else if (line.startsWith('a:')) {
-                  const toolResult = JSON.parse(line.substring(2));
-                  const invocation = aiMessage.toolInvocations.find(t => t.toolCallId === toolResult.toolCallId);
+                } else if (event.type === 'tool-result' || event.type === 'tool-output-available') {
+                  const invocation = aiMessage.toolInvocations.find(t => t.toolCallId === event.toolCallId);
                   if (invocation) {
                     invocation.state = 'result';
-                    invocation.result = toolResult.result;
+                    invocation.result = event.result || event.output;
                   }
                 }
               } catch (err) {
-                console.warn('Failed to parse chunk:', line, err);
+                // Ignore parse errors for incomplete chunks
               }
             }
           } else {
-            // Pure text stream (toTextStreamResponse)
+            // Pure text stream fallback
             aiMessage.content += chunk;
           }
           
