@@ -4,7 +4,6 @@ import { buildStudentTools } from '@/lib/ai/tools/student-tools';
 import { buildTeacherTools } from '@/lib/ai/tools/teacher-tools';
 import { buildAdminTools } from '@/lib/ai/tools/admin-tools';
 import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
@@ -16,25 +15,13 @@ export async function POST(req: Request) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const { messages, sessionId } = await req.json();
+    const { messages } = await req.json();
 
     // Context & History limitation (last 10 messages)
     const recentMessages = messages.slice(-10);
 
     const userId = session.user.id;
     const role = session.user.role || 'STUDENT';
-
-    // Rate Limiting Check
-    const { checkChatRateLimit } = require('@/lib/security/chatRateLimiter');
-    const rateLimit = checkChatRateLimit(req as any, userId);
-    if (!rateLimit.allowed) {
-      return new Response(`Rate limit exceeded. Try again in ${rateLimit.retryAfterSeconds} seconds.`, { status: 429 });
-    }
-
-    // Feature Flag check
-    if (process.env.ENABLE_CHATBOT !== 'true' && process.env.ENABLE_CHATBOT !== undefined) {
-      return new Response('Chatbot is currently disabled.', { status: 403 });
-    }
 
     // Build the system prompt
     const systemPrompt = `
@@ -60,33 +47,13 @@ export async function POST(req: Request) {
     // Initialize provider
     const model = getAIProvider();
 
-    // Stream text using Vercel AI SDK
-    const result = await streamText({
+    // Stream text using Vercel AI SDK v6
+    const result = streamText({
       model,
       system: systemPrompt,
       messages: recentMessages,
       tools,
-
-      abortSignal: AbortSignal.timeout(25000), // 25 second timeout protection
-      onFinish: async ({ usage, text, finishReason }) => {
-        try {
-          // Log token usage if sessionId is provided
-          if (sessionId) {
-            await prisma.aITokenUsage.create({
-              data: {
-                userId,
-                sessionId,
-                promptTokens: usage.promptTokens,
-                completionTokens: usage.completionTokens,
-                totalTokens: usage.totalTokens,
-              }
-            });
-            // Here we would also save the new messages to the ChatMessage table
-          }
-        } catch (e) {
-          console.error('Failed to log token usage', e);
-        }
-      }
+      abortSignal: AbortSignal.timeout(25000),
     });
 
     return result.toDataStreamResponse();

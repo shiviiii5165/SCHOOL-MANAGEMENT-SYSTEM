@@ -17,7 +17,7 @@ export class DisciplineService {
       const parent = await prisma.parent.findUnique({ where: { userId } });
       if (!parent) throw new Error("Parent not found");
       const students = await prisma.student.findMany({ where: { parentId: parent.id } });
-      return { studentIds: students.map(s => s.id) };
+      return { studentIds: students.map((s: any) => s.id) };
     }
     throw new Error("Invalid role");
   }
@@ -31,37 +31,34 @@ export class DisciplineService {
       where: { studentId },
       include: {
         teacher: { select: { user: { select: { name: true } } } },
-        action: true,
-        fine: true
       },
-      orderBy: { incidentDate: 'desc' }
+      orderBy: { createdAt: 'desc' }
     });
 
-    return reports.map(r => ({
+    return reports.map((r: any) => ({
       id: r.id,
-      date: r.incidentDate,
+      date: r.createdAt,
       category: r.category,
-      severity: r.severity,
       description: r.description,
       reportedBy: r.teacher.user.name,
       status: r.status,
-      action: r.action ? r.action.actionType : null,
-      fine: r.fine ? { amount: r.fine.amount, status: r.fine.status } : null
+      actionTaken: r.actionTaken,
+      actionType: r.actionType,
+      fineAmount: r.fineAmount,
+      fineStatus: r.fineStatus
     }));
   }
 
-  static async fileReport(userId: string, data: { studentId: string, category: string, severity: string, description: string, incidentDate: string }) {
+  static async fileReport(userId: string, data: { studentId: string, category: string, description: string }) {
     const access = await this.validateAccess(userId, 'TEACHER');
-    
+
     return prisma.disciplineReport.create({
       data: {
         studentId: data.studentId,
-        teacherId: access.teacherId!,
-        category: data.category as any,
-        severity: data.severity as any,
+        reportedBy: access.teacherId!,
+        category: data.category,
         description: data.description,
-        incidentDate: new Date(data.incidentDate),
-        status: 'PENDING_REVIEW'
+        status: 'PENDING'
       }
     });
   }

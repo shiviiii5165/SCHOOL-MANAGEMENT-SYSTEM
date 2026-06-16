@@ -3,14 +3,12 @@ import { prisma } from '@/lib/prisma';
 export class AdminAnalyticsService {
   static async validateAdmin(userId: string, role: string) {
     if (role !== 'ADMIN') throw new Error("Unauthorized");
-    const admin = await prisma.admin.findUnique({ where: { userId } });
-    if (!admin) throw new Error("Admin profile not found");
     return true;
   }
 
   static async getRevenueAnalytics(userId: string, role: string) {
     await this.validateAdmin(userId, role);
-    
+
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -18,7 +16,7 @@ export class AdminAnalyticsService {
       where: { status: 'PAID', updatedAt: { gte: startOfMonth } }
     });
 
-    const totalCollectedThisMonth = paidRecords.reduce((sum, r) => sum + r.paidAmount, 0);
+    const totalCollectedThisMonth = paidRecords.reduce((sum: number, r: any) => sum + r.paidAmount, 0);
 
     const defaulters = await prisma.feeRecord.findMany({
       where: { status: { in: ['OVERDUE', 'PARTIAL'] }, dueDate: { lt: now } },
@@ -29,7 +27,7 @@ export class AdminAnalyticsService {
 
     return {
       totalCollectedThisMonth,
-      topDefaulters: defaulters.map(d => ({
+      topDefaulters: defaulters.map((d: any) => ({
         studentName: d.student.user.name,
         amountDue: d.amount - d.paidAmount,
         dueDate: d.dueDate
@@ -45,11 +43,11 @@ export class AdminAnalyticsService {
       take: 1000
     });
 
-    const totalPromptTokens = usage.reduce((sum, u) => sum + u.promptTokens, 0);
-    const totalCompletionTokens = usage.reduce((sum, u) => sum + u.completionTokens, 0);
+    const totalPromptTokens = usage.reduce((sum: number, u: any) => sum + u.promptTokens, 0);
+    const totalCompletionTokens = usage.reduce((sum: number, u: any) => sum + u.completionTokens, 0);
     const totalTokens = totalPromptTokens + totalCompletionTokens;
 
-    // Estimate: $0.15 per 1M prompt, $0.60 per 1M completion for gpt-4o-mini
+    // GPT-4o-mini pricing: $0.15 per 1M input, $0.60 per 1M output
     const estimatedCost = (totalPromptTokens / 1000000) * 0.15 + (totalCompletionTokens / 1000000) * 0.60;
 
     return {

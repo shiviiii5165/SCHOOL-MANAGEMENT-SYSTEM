@@ -37,9 +37,7 @@ export const buildTeacherTools = (userId: string, role: string) => {
       parameters: z.object({
         studentId: z.string(),
         category: z.string(),
-        severity: z.string(),
         description: z.string(),
-        incidentDate: z.string().describe("ISO date string, e.g. YYYY-MM-DD")
       }),
       execute: async (args) => {
         try {
