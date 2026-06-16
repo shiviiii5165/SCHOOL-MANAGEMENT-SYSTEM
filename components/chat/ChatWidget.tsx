@@ -1,30 +1,91 @@
 'use client';
 
-import { useChat } from '@ai-sdk/react';
 import { useChatStore } from '@/store/chatStore';
 import { Bot, X, Send, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
-import { DefaultChatTransport } from 'ai';
-
 export const ChatWidget = () => {
   const { isOpen, toggleChat } = useChatStore();
-  const { messages = [], sendMessage, isLoading } = useChat({
-    transport: new DefaultChatTransport({ api: '/api/chat' })
-  }) as any;
-
+  
+  const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
     
-    sendMessage({
-      messages: [...messages, { role: 'user', content: input }]
-    });
+    const userMessage = { id: Date.now().toString(), role: 'user', content: input };
+    const newMessages = [...messages, userMessage];
+    
+    setMessages(newMessages);
     setInput('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: newMessages })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch response');
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      
+      let aiMessage = { id: (Date.now() + 1).toString(), role: 'assistant', content: '', toolInvocations: [] as any[] };
+      setMessages([...newMessages, aiMessage]);
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            
+            try {
+              if (line.startsWith('0:')) {
+                const text = JSON.parse(line.substring(2));
+                aiMessage.content += text;
+              } else if (line.startsWith('9:')) {
+                const toolCall = JSON.parse(line.substring(2));
+                aiMessage.toolInvocations.push({
+                  state: 'call',
+                  toolCallId: toolCall.toolCallId,
+                  toolName: toolCall.toolName,
+                  args: toolCall.args
+                });
+              } else if (line.startsWith('a:')) {
+                const toolResult = JSON.parse(line.substring(2));
+                const invocation = aiMessage.toolInvocations.find(t => t.toolCallId === toolResult.toolCallId);
+                if (invocation) {
+                  invocation.state = 'result';
+                  invocation.result = toolResult.result;
+                }
+              }
+              
+              setMessages([...newMessages, { ...aiMessage }]);
+            } catch (err) {
+              console.warn('Failed to parse chunk:', line, err);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: 'Sorry, I encountered an error connecting to the server.' }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -69,7 +130,7 @@ export const ChatWidget = () => {
                     {m.toolInvocations?.map((toolInvocation: any) => (
                       <div key={toolInvocation.toolCallId} className="mt-2 text-xs opacity-75 bg-black/5 p-2 rounded">
                         {toolInvocation.state === 'result' ? (
-                          <span className="text-green-600 font-semibold">✓ Fetched data</span>
+                          <span className="text-green-600 font-semibold flex items-center gap-1">✓ Using {toolInvocation.toolName} data</span>
                         ) : (
                           <span className="flex items-center gap-1">
                             <Loader2 size={12} className="animate-spin" /> Fetching data...
