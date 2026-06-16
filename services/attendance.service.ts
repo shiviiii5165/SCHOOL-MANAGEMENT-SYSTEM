@@ -1,4 +1,4 @@
-import prisma from '@/lib/prisma';
+import { prisma } from "@/lib/prisma";
 
 export class AttendanceService {
   static async getStudentSummary(userId: string, role: string, studentId: string) {

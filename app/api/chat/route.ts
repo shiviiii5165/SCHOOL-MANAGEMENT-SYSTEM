@@ -1,10 +1,10 @@
-import { streamText, Message } from 'ai';
+import { streamText } from 'ai';
 import { getAIProvider } from '@/lib/ai/provider-factory';
 import { buildStudentTools } from '@/lib/ai/tools/student-tools';
 import { buildTeacherTools } from '@/lib/ai/tools/teacher-tools';
 import { buildAdminTools } from '@/lib/ai/tools/admin-tools';
 import { auth } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
