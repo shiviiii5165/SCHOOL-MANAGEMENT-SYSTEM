@@ -1,4 +1,4 @@
-import { streamText } from 'ai';
+import { streamText, stepCountIs } from 'ai';
 import { getAIProvider } from '@/lib/ai/provider-factory';
 import { buildStudentTools } from '@/lib/ai/tools/student-tools';
 import { buildTeacherTools } from '@/lib/ai/tools/teacher-tools';
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       system: systemPrompt,
       messages: recentMessages,
       tools,
-      maxSteps: 3,
+      stopWhen: stepCountIs(3),
       abortSignal: AbortSignal.timeout(25000),
     });
 
