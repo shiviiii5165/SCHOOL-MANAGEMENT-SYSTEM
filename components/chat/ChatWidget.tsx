@@ -6,9 +6,14 @@ import { Bot, X, Send, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
+import { DefaultChatTransport } from 'ai';
+
 export const ChatWidget = () => {
   const { isOpen, toggleChat } = useChatStore();
-  const { messages = [], append, isLoading, input: chatInput, handleInputChange } = useChat() as any;
+  const { messages = [], sendMessage, isLoading } = useChat({
+    chat: undefined,
+    transport: new DefaultChatTransport({ api: '/api/chat' })
+  }) as any;
 
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -17,9 +22,8 @@ export const ChatWidget = () => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
     
-    append({
-      role: 'user',
-      content: input,
+    sendMessage({
+      messages: [...messages, { role: 'user', content: input }]
     });
     setInput('');
   };
