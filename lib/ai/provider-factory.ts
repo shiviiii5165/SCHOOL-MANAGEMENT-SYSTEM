@@ -24,7 +24,7 @@ export const getAIProvider = () => {
       const google = createGoogleGenerativeAI({
         apiKey: process.env.GEMINI_API_KEY,
       });
-      return google('gemini-1.5-flash');
+      return google('gemini-2.0-flash');
     }
   }
 };
