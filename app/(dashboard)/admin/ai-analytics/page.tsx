@@ -2,7 +2,6 @@ import { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { AdminAnalyticsService } from "@/services/AdminAnalyticsService";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Bot, Coins, Zap } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -31,49 +30,49 @@ export default async function AIAnalyticsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Queries</CardTitle>
+        <div className="rounded-xl border bg-card text-card-foreground shadow">
+          <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
+            <h3 className="tracking-tight text-sm font-medium">Total Queries</h3>
             <Bot className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div className="p-6 pt-0">
             <div className="text-2xl font-bold">{analyticsData.totalQueries}</div>
             <p className="text-xs text-muted-foreground">Successful chat completions</p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
         
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Token Usage</CardTitle>
+        <div className="rounded-xl border bg-card text-card-foreground shadow">
+          <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
+            <h3 className="tracking-tight text-sm font-medium">Token Usage</h3>
             <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div className="p-6 pt-0">
             <div className="text-2xl font-bold">{analyticsData.totalTokens.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">Prompt + Completion</p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Estimated Cost</CardTitle>
+        <div className="rounded-xl border bg-card text-card-foreground shadow">
+          <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
+            <h3 className="tracking-tight text-sm font-medium">Estimated Cost</h3>
             <Coins className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div className="p-6 pt-0">
             <div className="text-2xl font-bold">${analyticsData.estimatedCostUSD.toFixed(4)}</div>
             <p className="text-xs text-muted-foreground">Based on GPT-4o-mini pricing</p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Status</CardTitle>
+        <div className="rounded-xl border bg-card text-card-foreground shadow">
+          <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
+            <h3 className="tracking-tight text-sm font-medium">System Status</h3>
             <Zap className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div className="p-6 pt-0">
             <div className="text-2xl font-bold">Online</div>
             <p className="text-xs text-muted-foreground">Provider: {process.env.AI_PROVIDER || 'GEMINI'}</p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
       
       <div className="mt-8 bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
