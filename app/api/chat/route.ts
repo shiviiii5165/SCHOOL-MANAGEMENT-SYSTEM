@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       abortSignal: AbortSignal.timeout(25000),
     });
 
-    return result.toDataStreamResponse();
+    return result.toTextStreamResponse();
   } catch (error) {
     console.error('Chat API Error:', error);
     return new Response('Internal Server Error', { status: 500 });
