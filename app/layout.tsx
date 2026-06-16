@@ -57,6 +57,7 @@ export const metadata: Metadata = {
 };
 
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 
 import { Toaster } from "react-hot-toast";
 
@@ -71,6 +72,7 @@ export default function RootLayout({
         <QueryProvider>
           {children}
         </QueryProvider>
+        <ChatWidget />
         <Toaster position="top-center" />
       </body>
     </html>

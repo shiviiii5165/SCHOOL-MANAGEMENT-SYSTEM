@@ -10,10 +10,15 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.84",
+    "@ai-sdk/google": "^3.0.82",
+    "@ai-sdk/openai": "^3.0.71",
+    "@ai-sdk/react": "^3.0.208",
     "@cashfreepayments/cashfree-js": "^1.0.7",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "^5.22.0",
     "@tanstack/react-query": "^5.24.1",
+    "ai": "^6.0.206",
     "bcryptjs": "^3.0.3",
     "cashfree-pg": "^6.0.4",
     "class-variance-authority": "^0.7.0",
@@ -34,6 +39,7 @@
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.51.0",
     "react-hot-toast": "^2.6.0",
+    "react-markdown": "^10.1.0",
     "recharts": "^2.15.4",
     "socket.io": "^4.7.4",
     "socket.io-client": "^4.7.4",
