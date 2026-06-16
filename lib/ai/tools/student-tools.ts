@@ -13,7 +13,7 @@ export const buildStudentTools = (userId: string, role: string) => {
     get_attendance_summary: {
       description: 'Get the attendance summary for a specific student.',
       parameters: z.object({
-        studentId: z.string().describe('The ID of the student to fetch attendance for.'),
+        studentId: z.string().optional().describe('Optional. The ID of the student. If the user is a student, you do not need to provide this.'),
       }),
       execute: async ({ studentId }: any) => {
         try {
@@ -26,7 +26,7 @@ export const buildStudentTools = (userId: string, role: string) => {
     get_attendance_history: {
       description: 'Get recent attendance history for a specific student.',
       parameters: z.object({
-        studentId: z.string().describe('The ID of the student.'),
+        studentId: z.string().optional().describe('Optional. The ID of the student.'),
         limit: z.number().optional().describe('Number of recent records to fetch. Default is 10.'),
       }),
       execute: async ({ studentId, limit }: any) => {
@@ -37,6 +37,16 @@ export const buildStudentTools = (userId: string, role: string) => {
         }
       },
     },
-    // Additional student tools (getFees, getExams) will go here
+    get_notices: {
+      description: 'Get current active notices and announcements for the user.',
+      parameters: z.object({}),
+      execute: async () => {
+        try {
+          return await NoticeService.getActiveNotices(userId, role);
+        } catch (error: any) {
+          return { error: error.message };
+        }
+      },
+    },
   };
 };
