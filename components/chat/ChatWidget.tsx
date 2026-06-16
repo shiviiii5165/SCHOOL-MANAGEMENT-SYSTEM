@@ -11,7 +11,6 @@ import { DefaultChatTransport } from 'ai';
 export const ChatWidget = () => {
   const { isOpen, toggleChat } = useChatStore();
   const { messages = [], sendMessage, isLoading } = useChat({
-    chat: undefined,
     transport: new DefaultChatTransport({ api: '/api/chat' })
   }) as any;
 
