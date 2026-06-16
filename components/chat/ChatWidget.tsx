@@ -3,16 +3,26 @@
 import { useChat } from '@ai-sdk/react';
 import { useChatStore } from '@/store/chatStore';
 import { Bot, X, Send, Loader2 } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 export const ChatWidget = () => {
   const { isOpen, toggleChat } = useChatStore();
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    api: '/api/chat',
-  });
+  const { messages = [], append, isLoading, input: chatInput, handleInputChange } = useChat() as any;
 
+  const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    
+    append({
+      role: 'user',
+      content: input,
+    });
+    setInput('');
+  };
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -42,18 +52,18 @@ export const ChatWidget = () => {
                 <p>Hello! How can I help you today?</p>
               </div>
             ) : (
-              messages.map(m => (
+              messages.map((m: any) => (
                 <div key={m.id} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
                   <div className={`max-w-[85%] rounded-2xl px-4 py-2 ${
                     m.role === 'user' 
                       ? 'bg-primary text-white rounded-tr-sm' 
                       : 'bg-gray-100 text-gray-800 rounded-tl-sm'
                   }`}>
-                    <ReactMarkdown className="prose prose-sm max-w-none dark:prose-invert">
+                    <ReactMarkdown>
                       {m.content}
                     </ReactMarkdown>
                     {/* Render tool invocations */}
-                    {m.toolInvocations?.map(toolInvocation => (
+                    {m.toolInvocations?.map((toolInvocation: any) => (
                       <div key={toolInvocation.toolCallId} className="mt-2 text-xs opacity-75 bg-black/5 p-2 rounded">
                         {toolInvocation.state === 'result' ? (
                           <span className="text-green-600 font-semibold">✓ Fetched data</span>
@@ -75,7 +85,7 @@ export const ChatWidget = () => {
             <div className="flex relative">
               <input
                 value={input}
-                onChange={handleInputChange}
+                onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask something..."
                 className="w-full bg-white border border-gray-300 rounded-full pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm"
                 disabled={isLoading}

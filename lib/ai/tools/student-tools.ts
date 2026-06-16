@@ -1,4 +1,4 @@
-import { tool } from 'ai';
+
 import { z } from 'zod';
 import { AttendanceService } from '@/services/attendance.service';
 import { FeeService } from '@/services/FeeService';
@@ -10,33 +10,33 @@ import { DisciplineService } from '@/services/DisciplineService';
 
 export const buildStudentTools = (userId: string, role: string) => {
   return {
-    get_attendance_summary: tool({
+    get_attendance_summary: {
       description: 'Get the attendance summary for a specific student.',
       parameters: z.object({
         studentId: z.string().describe('The ID of the student to fetch attendance for.'),
       }),
-      execute: async ({ studentId }) => {
+      execute: async ({ studentId }: any) => {
         try {
           return await AttendanceService.getStudentSummary(userId, role, studentId);
         } catch (error: any) {
           return { error: error.message };
         }
       },
-    }),
-    get_attendance_history: tool({
+    },
+    get_attendance_history: {
       description: 'Get recent attendance history for a specific student.',
       parameters: z.object({
         studentId: z.string().describe('The ID of the student.'),
         limit: z.number().optional().describe('Number of recent records to fetch. Default is 10.'),
       }),
-      execute: async ({ studentId, limit }) => {
+      execute: async ({ studentId, limit }: any) => {
         try {
           return await AttendanceService.getStudentHistory(userId, role, studentId, limit);
         } catch (error: any) {
           return { error: error.message };
         }
       },
-    }),
+    },
     // Additional student tools (getFees, getExams) will go here
   };
 };

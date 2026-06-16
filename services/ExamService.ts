@@ -42,7 +42,6 @@ export class ExamService {
     // Find exams that have slots for this student's class and are upcoming
     const exams = await prisma.exam.findMany({
       where: {
-        status: { in: ['PUBLISHED', 'MARKS_ENTRY'] },
         endDate: { gte: now },
         slots: { some: { classId: student.classId } }
       },

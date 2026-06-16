@@ -13,7 +13,7 @@ export class AdminAnalyticsService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const paidRecords = await prisma.feeRecord.findMany({
-      where: { status: 'PAID', updatedAt: { gte: startOfMonth } }
+      where: { status: 'PAID', paidDate: { gte: startOfMonth } }
     });
 
     const totalCollectedThisMonth = paidRecords.reduce((sum: number, r: any) => sum + r.paidAmount, 0);
