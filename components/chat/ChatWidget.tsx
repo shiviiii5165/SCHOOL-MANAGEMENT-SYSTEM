@@ -46,9 +46,16 @@ export const ChatWidget = () => {
       if (reader) {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            // Handle cases where the stream closes without any content (e.g. OpenAI quota exceeded)
+            if (!aiMessage.content && aiMessage.toolInvocations.length === 0) {
+              aiMessage.content = "⚠️ **Error:** The AI service is currently unavailable. This is usually because your OpenAI API key has **exceeded its quota or run out of credits**. Please check your OpenAI billing details.";
+              setMessages([...newMessages, { ...aiMessage }]);
+            }
+            break;
+          }
           
-          const chunk = decoder.decode(value);
+          const chunk = decoder.decode(value, { stream: true });
           
           if (!isProtocolStream && (chunk.startsWith('0:') || chunk.startsWith('9:'))) {
             isProtocolStream = true;
