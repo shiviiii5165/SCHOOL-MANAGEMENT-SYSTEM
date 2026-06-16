@@ -66,7 +66,7 @@ export async function POST(req: Request) {
       system: systemPrompt,
       messages: recentMessages,
       tools,
-      maxSteps: 3, // Allow the model to call a tool, see the result, and answer
+
       abortSignal: AbortSignal.timeout(25000), // 25 second timeout protection
       onFinish: async ({ usage, text, finishReason }) => {
         try {
