@@ -49,7 +49,7 @@ export const ChatWidget = () => {
           if (done) {
             // Handle cases where the stream closes without any content (e.g. OpenAI quota exceeded)
             if (!aiMessage.content && aiMessage.toolInvocations.length === 0) {
-              aiMessage.content = "⚠️ **Error:** The AI service is currently unavailable. This is usually because your OpenAI API key has **exceeded its quota or run out of credits**. Please check your OpenAI billing details.";
+              aiMessage.content = "⚠️ **Error:** The AI service is currently unavailable. This is usually because your API key has **exceeded its quota or run out of credits**. Please check your API billing details (OpenAI or Google Gemini).";
               setMessages([...newMessages, { ...aiMessage }]);
             }
             break;
