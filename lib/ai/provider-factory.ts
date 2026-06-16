@@ -1,12 +1,19 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGroq } from '@ai-sdk/groq';
 // ollama provider can be added similarly if needed
 
 export const getAIProvider = () => {
   const provider = process.env.AI_PROVIDER || 'GEMINI';
 
   switch (provider.toUpperCase()) {
+    case 'GROQ': {
+      const groq = createGroq({
+        apiKey: process.env.GROQ_API_KEY,
+      });
+      return groq('llama-3.3-70b-versatile');
+    }
     case 'OPENAI': {
       const openai = createOpenAI({
         apiKey: process.env.OPENAI_API_KEY,

@@ -12,6 +12,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.84",
     "@ai-sdk/google": "^3.0.82",
+    "@ai-sdk/groq": "^3.0.41",
     "@ai-sdk/openai": "^3.0.71",
     "@ai-sdk/react": "^3.0.208",
     "@cashfreepayments/cashfree-js": "^1.0.7",
