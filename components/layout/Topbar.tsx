@@ -41,12 +41,13 @@ export default function Topbar({
       </div>
 
       <div className="flex items-center gap-4 sm:gap-6">
-        <div className="relative hidden md:block w-64">
+        <div className="relative hidden md:block w-64" title="Search coming soon">
           <Search className="w-4 h-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search..."
-            className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-full text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+            placeholder="Search... (Coming Soon)"
+            disabled
+            className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-full text-sm focus:outline-none transition-all cursor-not-allowed opacity-60"
           />
         </div>
 

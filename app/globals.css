@@ -104,3 +104,32 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Improved focus styles for keyboard navigation */
+@layer base {
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+}
+
+/* Better touch feedback on mobile */
+@media (hover: none) and (pointer: coarse) {
+  button, a, [role="button"] {
+    cursor: default;
+  }
+
+  /* Ensure interactive elements have adequate sizing */
+  input, select, textarea {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+}

@@ -38,7 +38,7 @@ export const ChatWidget = () => {
   const sendMessage = async (messageText: string) => {
     if (!messageText.trim() || isLoading) return;
     
-    const userMessage = { id: Date.now().toString(), role: 'user', content: messageText };
+    const userMessage = { id: crypto.randomUUID(), role: 'user', content: messageText };
     const newMessages = [...messages, userMessage];
     
     setMessages(newMessages);
@@ -59,7 +59,7 @@ export const ChatWidget = () => {
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       
-      let aiMessage = { id: (Date.now() + 1).toString(), role: 'assistant', content: '', toolInvocations: [] as any[] };
+      let aiMessage = { id: crypto.randomUUID(), role: 'assistant', content: '', toolInvocations: [] as any[] };
       setMessages([...newMessages, aiMessage]);
       let isProtocolStream = false;
 
@@ -88,23 +88,29 @@ export const ChatWidget = () => {
               try {
                 const event = JSON.parse(line.substring(6));
                 if (event.type === 'text-delta') {
-                  aiMessage.content += event.delta;
+                  aiMessage = { ...aiMessage, content: aiMessage.content + event.delta };
                 } else if (event.type === 'tool-call' || event.type === 'tool-input-start') {
                   const existing = aiMessage.toolInvocations.find((t: any) => t.toolCallId === event.toolCallId);
                   if (!existing) {
-                    aiMessage.toolInvocations.push({
-                      state: 'call',
-                      toolCallId: event.toolCallId,
-                      toolName: event.toolName,
-                      args: event.args || {}
-                    });
+                    aiMessage = {
+                      ...aiMessage,
+                      toolInvocations: [...aiMessage.toolInvocations, {
+                        state: 'call',
+                        toolCallId: event.toolCallId,
+                        toolName: event.toolName,
+                        args: event.args || {}
+                      }]
+                    };
                   }
                 } else if (event.type === 'tool-result' || event.type === 'tool-output-available') {
-                  const invocation = aiMessage.toolInvocations.find((t: any) => t.toolCallId === event.toolCallId);
-                  if (invocation) {
-                    invocation.state = 'result';
-                    invocation.result = event.result || event.output;
-                  }
+                  aiMessage = {
+                    ...aiMessage,
+                    toolInvocations: aiMessage.toolInvocations.map((t: any) =>
+                      t.toolCallId === event.toolCallId
+                        ? { ...t, state: 'result', result: event.result || event.output }
+                        : t
+                    )
+                  };
                 }
               } catch (err) {
                 // Ignore parse errors for incomplete chunks
@@ -119,7 +125,7 @@ export const ChatWidget = () => {
       }
     } catch (error) {
       console.error('Chat error:', error);
-      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: '❌ Sorry, I encountered an error. Please try again.' }]);
+      setMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: '❌ Sorry, I encountered an error. Please try again.' }]);
     } finally {
       setIsLoading(false);
     }
@@ -148,11 +154,11 @@ export const ChatWidget = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50">
       {/* Chat Window */}
       {isOpen && (
         <div
-          className="mb-4 w-[380px] h-[560px] rounded-3xl flex flex-col overflow-hidden"
+          className="mb-4 w-[calc(100vw-2rem)] sm:w-[380px] h-[min(560px,calc(100dvh-8rem))] rounded-3xl flex flex-col overflow-hidden"
           style={{
             background: 'linear-gradient(145deg, #ffffff 0%, #f8faff 100%)',
             boxShadow: '0 25px 60px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(59, 130, 246, 0.08)',

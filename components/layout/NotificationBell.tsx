@@ -73,6 +73,16 @@ export default function NotificationBell({ role }: { role: string }) {
     };
   }, [open, mutate]);
 
+  // Lock body scroll when notification panel is open on mobile
+  useEffect(() => {
+    if (open && window.innerWidth < 640) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [open]);
+
   const TYPE_ICONS: Record<string, { icon: any, color: string }> = {
     DISCIPLINE: { icon: AlertTriangle, color: 'text-danger'  },
     ATTENDANCE: { icon: Calendar,      color: 'text-primary' },

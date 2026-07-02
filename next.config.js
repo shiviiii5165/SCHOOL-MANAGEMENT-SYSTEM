@@ -19,7 +19,8 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: [
         'localhost:3000',
-        'your-app.vercel.app',
+        'school.shiviiii.com',
+        'school-management-system-aqbwy48or-shiviiii5165-4805s-projects.vercel.app',
       ],
     },
   },

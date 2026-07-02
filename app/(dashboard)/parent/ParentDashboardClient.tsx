@@ -83,10 +83,10 @@ export default function ParentDashboardClient({ childrenData, parentName, newNot
 
       {/* SUSPENSION BANNER */}
       {selectedChild.isSuspended && (
-        <div className="flex gap-3 p-4 bg-warning-bg border border-warning/20 rounded-xl mb-4">
-          <AlertTriangle size={20} className="text-warning flex-shrink-0 mt-0.5"/>
+        <div className="flex gap-3 p-4 bg-status-warning-bg border border-status-warning/20 rounded-xl mb-4">
+          <AlertTriangle size={20} className="text-status-warning flex-shrink-0 mt-0.5"/>
           <div>
-            <p className="text-sm font-semibold text-warning-text">Suspension Notice</p>
+            <p className="text-sm font-semibold text-status-warning-text">Suspension Notice</p>
             <p className="text-sm text-text-secondary">
               {selectedChild.name} is suspended until <strong>{selectedChild.suspendedUntil ? new Date(selectedChild.suspendedUntil).toLocaleDateString() : 'Unknown'}</strong>.
             </p>

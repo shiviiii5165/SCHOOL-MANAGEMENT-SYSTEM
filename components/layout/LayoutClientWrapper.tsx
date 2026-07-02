@@ -46,8 +46,10 @@ export default function LayoutClientWrapper({
         }}
       >
         {/* Push content right on md+ screens based on sidebar width */}
-        <style>{`@media (min-width: 768px) { .layout-main-shift { margin-left: ${sidebarWidth}px !important; } }`}</style>
-        <div className="layout-main-shift flex-1 flex flex-col transition-all duration-300 ease-in-out">
+        <div 
+          className="flex-1 flex flex-col transition-all duration-300 ease-in-out md:ml-[var(--sidebar-w)]"
+          style={{ '--sidebar-w': `${sidebarWidth}px` } as React.CSSProperties}
+        >
           <Topbar 
             user={user} 
             onOpenMobileDrawer={() => setIsMobileDrawerOpen(true)} 

@@ -8,9 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GraduationCap, LogOut, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { getNavItems } from "@/lib/navItems";
-import useSWR from "swr";
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { useNavBadges } from "@/hooks/useNavBadges";
 
 export default function Sidebar({ 
   user, 
@@ -35,12 +33,7 @@ export default function Sidebar({
     PARENT: "bg-role-parent",
   };
 
-  // Poll nav badges
-  const { data: badgeData, mutate: mutateBadges } = useSWR('/api/nav-badges', fetcher, {
-    refreshInterval: 15000,
-  });
-  
-  const badges = badgeData?.badges || {};
+  const { badges, mutateBadges } = useNavBadges();
 
   // Auto-clear notifications when visiting a page (with ref to prevent render loop)
   const lastClearedRef = useRef<string>('');

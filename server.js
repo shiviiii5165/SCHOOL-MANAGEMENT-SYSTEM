@@ -26,7 +26,11 @@ app.prepare().then(() => {
 
   const io = new Server(server, {
     cors: {
-      origin: "*",
+      origin: [
+        "http://localhost:3000",
+        process.env.FRONTEND_URL,
+        "https://school.shiviiii.com",
+      ].filter(Boolean),
     },
   });
 
@@ -150,8 +154,9 @@ app.prepare().then(() => {
       const userId = socket.data?.userId;
       if (!userId || !conversationId) return;
       
-      const { prisma } = require('./lib/prisma');
-      prisma.messageParticipant.updateMany({
+      const { PrismaClient } = require('@prisma/client');
+      const prismaClient = global._prismaClient || (global._prismaClient = new PrismaClient());
+      prismaClient.messageParticipant.updateMany({
         where: { conversationId, userId },
         data:  { lastReadAt: new Date() }
       }).catch(() => {});

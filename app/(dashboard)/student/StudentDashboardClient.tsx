@@ -31,18 +31,18 @@ export default function StudentDashboardClient({ student, unpaidFines = [] }: { 
       )}
       {/* SUSPENSION BANNER */}
       {student?.isSuspended && (
-        <div className="flex gap-3 p-4 bg-danger-bg border border-danger/20 rounded-xl mb-6">
-          <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center flex-shrink-0">
-            <Lock size={20} className="text-danger"/>
+        <div className="flex gap-3 p-4 bg-status-danger-bg border border-status-danger/20 rounded-xl mb-6">
+          <div className="w-10 h-10 rounded-full bg-status-danger/10 flex items-center justify-center flex-shrink-0">
+            <Lock size={20} className="text-status-danger"/>
           </div>
           <div>
-            <p className="text-sm font-semibold text-danger">Account Suspended</p>
+            <p className="text-sm font-semibold text-status-danger">Account Suspended</p>
             <p className="text-sm text-text-secondary mt-0.5">
               You are suspended from <strong>{formatDate(student.suspendedFrom)}</strong> to{' '}
               <strong>{formatDate(student.suspendedUntil)}</strong>.
             </p>
             <p className="text-xs text-text-muted mt-1">Reason: {student.suspendedReason}</p>
-            <p className="text-xs text-success mt-1">
+            <p className="text-xs text-status-success mt-1">
               ✓ Access automatically restores on {formatDate(student.suspendedUntil)}.
             </p>
           </div>

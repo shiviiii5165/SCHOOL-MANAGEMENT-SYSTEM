@@ -4,9 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { getNavItems } from "@/lib/navItems";
-import useSWR from "swr";
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { useNavBadges } from "@/hooks/useNavBadges";
 
 export default function BottomNav({ 
   user,
@@ -22,11 +20,8 @@ export default function BottomNav({
   const primaryItems = allNavItems.slice(0, 4);
   const hasMore = allNavItems.length > 4;
 
-  // Poll nav badges
-  const { data: badgeData } = useSWR('/api/nav-badges', fetcher, {
-    refreshInterval: 15000,
-  });
-  const badges = badgeData?.badges || {};
+  // Shared badge hook (deduplicates with Sidebar)
+  const { badges } = useNavBadges();
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-lg border-t border-border z-40 pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">

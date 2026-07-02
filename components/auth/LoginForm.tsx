@@ -52,7 +52,8 @@ export default function LoginForm({ initialError }: { initialError?: string | nu
         setSuccessRole(role);
         
         setTimeout(() => {
-          window.location.href = `/${role.toLowerCase()}`;
+          router.push(`/${role.toLowerCase()}`);
+          router.refresh();
         }, 1500);
       }
     } catch (err) {
@@ -106,7 +107,7 @@ export default function LoginForm({ initialError }: { initialError?: string | nu
         <div className="space-y-1">
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-text-primary">Password</label>
-            <a href="#" className="text-xs text-primary hover:text-primary-dark font-medium transition-colors">
+            <a href="/forgot-password" className="text-xs text-primary hover:text-primary-dark font-medium transition-colors">
               Forgot Password?
             </a>
           </div>

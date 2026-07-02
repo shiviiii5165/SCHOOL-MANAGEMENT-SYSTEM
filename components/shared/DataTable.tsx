@@ -149,6 +149,7 @@ export default function DataTable<T extends { id: string }>({
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
+              setCurrentPage(1);
               if (onSearchChange) onSearchChange(e.target.value);
             }}
             className="w-full pl-9 pr-4 py-2 border border-border rounded-md text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
@@ -272,7 +273,7 @@ export default function DataTable<T extends { id: string }>({
                 
                 {(onEdit || onView || onDelete) && (
                   <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       {onView && (
                         <button onClick={() => onView(item)} className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-text-muted hover:text-primary hover:bg-primary-light rounded transition-colors" title="View">
                           <Eye className="w-4 h-4" />

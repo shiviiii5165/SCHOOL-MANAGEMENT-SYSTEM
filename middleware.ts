@@ -44,7 +44,9 @@ export async function middleware(req: NextRequest) {
 
     let email = 'unknown'
     try {
-      const body  = await req.text()
+      // Clone the request before reading the body to avoid consuming the stream
+      const clonedReq = req.clone()
+      const body  = await clonedReq.text()
       const params = new URLSearchParams(body)
       email = params.get('email') ?? 'unknown'
     } catch {}
